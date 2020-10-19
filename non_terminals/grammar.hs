@@ -86,7 +86,7 @@ argsParser :: Parsec [Token] st [Token]
 argsParser = (do  typee <- typeToken
                   idd <- idToken
                   remainingArgs <- many argParser
-                  return typee:idd:(concat remainingArgs)) <|>
+                  return (typee:idd:(concat remainingArgs))) <|>
                 (return [])
 
 
@@ -95,37 +95,40 @@ argParser = do
             comma <- commaToken
             typee <- typeToken
             idd <- idToken
-            return commaToken:typeToken:[idToken]
+            return (commaToken:typeToken:[idToken])
 
 
 blockParser :: Parsec [Token] st [Token]
 blockParser = do
             prefixBlock <- prefixBlockParser
             blocks <- many blockParser
-            return prefixBlock ++ (concat blocks)
+            return (prefixBlock ++ (concat blocks))
 
 
 prefixBlockParser :: Parsec [Token] st [Token]
 prefixBlockParser = (do   stmt <- stmtParser
                           separator <- separatorParser
-                          return stmt ++ separator
-                    ) <|> (return auxBlockParser
-                    ) <|> (return controlStructureParser
+                          return (stmt ++ separator)
+                    ) <|> (return (auxBlockParser)
+                    ) <|> (return (controlStructureParser)
                     )
 
 
 separatorParser :: Parsec [Token] st [Token]
-separatorParser = (return semicolonToken) <|> (return newLineToken)
+separatorParser = (do   semicolon <- semicolonToken
+                        return ([semicolon])) <|>
+                  (do   newLine <- newLineToken
+                        return ([newLine]))
 
 
 stmtParser :: Parsec [Token] st [Token]
 stmtParser = (do  a <- lessThanToken
-                  return a)
+                  return ([a]))
 
 
 controlStructureParser :: Parsec [Token] st [Token]
 controlStructureParser = (do  a <- lessThanToken
-                              return a:[])
+                              return ([a]))
 
 --
 -- sub :: Parsec [Token] st [Token]
