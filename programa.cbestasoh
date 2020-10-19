@@ -1,0 +1,52 @@
+// imports
+import "xxx";
+import "biblioteca";
+
+global string msg;
+
+// funcao para calcular raiz quadrada
+func double calcRaizQuadrada(double x){
+    if (x == 1.0 || (x < 1.0 && 1 + 1 != 2)) then{
+        return 0.0;
+    }else{
+        return x ^ (0.5);
+    }
+}
+
+// funcao exemplo
+proc aa(int x){
+    msg := "aa";
+    if((x % 2) == 1 ) then{
+        msg := "a";
+    }
+}
+
+// corpo main do programa
+func int main(){
+    double start := 1000000.0;
+    while(start > 0){
+        start := calcRaizQuadrada(start);
+        for(int x := 0; x < 10; x := x + 1){
+            if(x + start >_ 5) then{
+                continue;
+            }else if(x - start <_ 5) then{
+                break;
+            }else{
+                start := start * (x % 10);
+            }
+        }
+    }
+    bool flag := true;
+    flag := false;
+
+    int count := 0;
+    for(; count > -10; count := count - 1)
+    {
+        //double num := 7.0;
+        if (count ==_ -8.9999) then
+        {
+            return 0;
+        }
+    }
+    return -1;
+}
