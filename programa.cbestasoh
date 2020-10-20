@@ -1,52 +1,57 @@
 // imports
-import "xxx";
-import "biblioteca";
+#import <xxx>
+#import <biblioteca>;
 
-string msg;
+String msg
 
 // funcao para calcular raiz quadrada
-func double calcRaizQuadrada(double x){
-    if (x == 1.0 || (x < 1.0 && 1 + 1 != 2)) then{
-        return 0.0;
-    }else{
+func Double calcRaizQuadrada(Double x) {
+    if (x == 1.0 || (x < 1.0 && 1 + 1 != 2)) then {
+        return 0.0
+    } else {
         return x ^ (0.5);
     }
 }
 
 // funcao exemplo
-proc aa(int x){
+proc aa(Int x) {
     msg := "aa";
-    if((x % 2) == 1 ) then{
+    if ((x % 2) == 1 ) then {
         msg := "a";
     }
 }
 
 // corpo main do programa
-func int main(){
-    double start := 1000000.0;
-    while(start > 0){
+func Int main() {
+    Double start := 1000000.0;
+    // aqui eh pra dar erro porque nao tem o {
+    while (start > 0) 
         start := calcRaizQuadrada(start);
-        for(int x := 0; x < 10; x := x + 1){
-            if(x + start >_ 5) then{
-                continue;
-            }else if(x - start <_ 5) then{
+        for (int x := 0; x < 10; x := x + 1) {
+            // aqui eh pra dar erro porque nao tem o "then"
+            if (x + start >_3.0 5) {
+                continue
+            } else if (x - start <_ 5) then {
                 break;
-            }else{
-                start := start * (x % 10);
+            } else {
+                start := start * (x % 10)
             }
         }
     }
+
+    // aqui eh pra dar erro porque tipos comecam com maiuscula
     bool flag := true;
     flag := false;
 
-    int count := 0;
-    for(; count > -10; count := count - 1)
+    Int count := 0;
+    for (; count > -10; count := count - 1)
     {
-        //double num := 7.0;
+        // double num := 7.0;
         if (count ==_ -8.9999) then
         {
             return 0;
-        }
+            // aqui eh pra dar erro porque nao tem o }
     }
+
     return -1;
 }
