@@ -1,2 +1,16 @@
-#import <xxx>
-#import <biblioteca>
+#import <xxx>;
+
+#import <biblioteca>;
+
+string msg;
+
+// funcao para calcular raiz quadrada
+func double calcRaizQuadrada(double x){
+    if (x == 1.0 || (x < 1.0 && 1 + 1 != 2)) then{
+        return 0.0;
+    }else{
+        return x ^ (0.5);
+    }
+}
+
+Int x := 10

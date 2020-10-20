@@ -8,13 +8,12 @@ module Main (main, Token(..), alexScanTokens) where
 $digit = 0-9          -- digits
 $alpha = [a-zA-Z]     -- alphabetic characters
 
-
 ---------------------- MAIN  -------------------------
 tokens :-
 
-    $white+                                 ; -- ignora espaços em branco
+    $white+                                  { \s -> (checkWhite(s))}
     "//".*                                  ; -- ignora comentários
-    (int | double | bool | string)          { \s -> Type s}
+    ("Int" | "Double" | "Bool" | "String")  { \s -> Type s}
     return                                  { \s -> Return}
     import                                  { \s -> Import}
     main                                    { \s -> Main}
@@ -23,8 +22,7 @@ tokens :-
     $alpha [$alpha $digit \_ \']*           { \s -> Id s}
     "#"                                     { \s -> Hashtag}
     ":"                                     { \s -> Colon}
-    ";"                                     { \s -> SemiColon}
-    \n+                                     { \s -> NewLine}
+    ";"                                     { \s -> Semicolon}
     ","                                     { \s -> Comma}
     \.                                      { \s -> Dot}
 
@@ -92,7 +90,8 @@ data Token =
     Func |
     Proc |
     Hashtag |
-    SemiColon |
+    Empty |
+    Semicolon |
     Colon |
     NewLine |
     Comma |
@@ -142,7 +141,12 @@ data Token =
     String String
     deriving (Eq,Show)
 
+checkWhite :: String -> Token
+checkWhite s  | elem '\n' s = NewLine
+              | otherwise = Empty
+
+
 main = do
   s <- getContents
-  print (alexScanTokens s)
+  print (filter (/= Empty) (alexScanTokens s))
 }

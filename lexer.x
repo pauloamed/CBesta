@@ -16,9 +16,9 @@ $alpha = [a-zA-Z]     -- alphabetic characters
 ---------------------- MAIN  -------------------------
 tokens :-
 
-    $white+                                 ; -- ignora espaços em branco
+    $white+                                  { \s -> (checkWhite(s))}
     "//".*                                  ; -- ignora comentários
-    (int | double | bool | string)          { \s -> Type s}
+    ("Int" | "Double" | "Bool" | "String")  { \s -> Type s}
     return                                  { \s -> Return}
     import                                  { \s -> Import}
     main                                    { \s -> Main}
@@ -28,7 +28,6 @@ tokens :-
     "#"                                     { \s -> Hashtag}
     ":"                                     { \s -> Colon}
     ";"                                     { \s -> Semicolon}
-    \n+                                     { \s -> NewLine}
     ","                                     { \s -> Comma}
     \.                                      { \s -> Dot}
 
@@ -96,6 +95,7 @@ data Token =
     Func |
     Proc |
     Hashtag |
+    Empty |
     Semicolon |
     Colon |
     NewLine |
@@ -146,9 +146,14 @@ data Token =
     String String
     deriving (Eq,Show)
 
+checkWhite :: String -> Token
+checkWhite s  | elem '\n' s = NewLine
+              | otherwise = Empty
+
+
 getTokens fn = unsafePerformIO (getTokensAux fn)
 
 getTokensAux fn = do {fh <- openFile fn ReadMode;
                     s <- hGetContents fh;
-                    return (alexScanTokens s)}
+                    return (filter (/= Empty) (alexScanTokens s))}
 }

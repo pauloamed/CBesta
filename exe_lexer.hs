@@ -1,11 +1,8 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-missing-signatures #-}
 {-# LANGUAGE CPP #-}
-{-# LINE 1 "lexer.x" #-}
+{-# LINE 1 "exe_lexer.x" #-}
 
-module Lexer (Token(..), alexScanTokens, getTokens) where
-
-import System.IO
-import System.IO.Unsafe
+module Main (main, Token(..), alexScanTokens) where
 
 #if __GLASGOW_HASKELL__ >= 603
 #include "ghcconfig.h"
@@ -10160,7 +10157,7 @@ alex_actions = array (0 :: Int, 78)
   , (0,alex_action_53)
   ]
 
-{-# LINE 87 "lexer.x" #-}
+{-# LINE 82 "exe_lexer.x" #-}
 
 data Token =
 -- MAIN  ---------------------------------------------
@@ -10228,11 +10225,9 @@ checkWhite s  | elem '\n' s = NewLine
               | otherwise = Empty
 
 
-getTokens fn = unsafePerformIO (getTokensAux fn)
-
-getTokensAux fn = do {fh <- openFile fn ReadMode;
-                    s <- hGetContents fh;
-                    return (filter (/= Empty) (alexScanTokens s))}
+main = do
+  s <- getContents
+  print (filter (/= Empty) (alexScanTokens s))
 
 alex_action_0 =  \s -> (checkWhite(s))
 alex_action_2 =  \s -> Type s

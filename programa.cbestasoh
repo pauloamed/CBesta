@@ -2,7 +2,7 @@
 import "xxx";
 import "biblioteca";
 
-global string msg;
+string msg;
 
 // funcao para calcular raiz quadrada
 func double calcRaizQuadrada(double x){
