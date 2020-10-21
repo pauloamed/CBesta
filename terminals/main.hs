@@ -30,10 +30,10 @@ importToken = tokenPrim show update_pos get_token where
   get_token _  = Nothing
 
 
-mainToken :: Parsec [Token] st Token
-mainToken = tokenPrim show update_pos get_token where
-  get_token (Main p)  = Just (Main p)
-  get_token _  = Nothing
+-- mainToken :: Parsec [Token] st Token
+-- mainToken = tokenPrim show update_pos get_token where
+--   get_token (Main p)  = Just (Main p)
+--   get_token _  = Nothing
 
 
 funcToken :: Parsec [Token] st Token
