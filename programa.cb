@@ -1,13 +1,13 @@
 // imports
-#import <xxx>
+#import <xxx>;
 #import <biblioteca>;
 
-String msg
+String msg;
 
 // funcao para calcular raiz quadrada
 func Double calcRaizQuadrada(Double x) {
     if (x == 1.0 || (x < 1.0 && 1 + 1 != 2)) then {
-        return 0.0
+        return 0.0;
     } else {
         return x ^ (0.5);
     }
@@ -25,16 +25,16 @@ proc aa(Int x) {
 func Int main() {
     Double start := 1000000.0;
     // aqui eh pra dar erro porque nao tem o {
-    while (start > 0) 
+    while (start > 0)
         start := calcRaizQuadrada(start);
         for (int x := 0; x < 10; x := x + 1) {
             // aqui eh pra dar erro porque nao tem o "then"
             if (x + start >_3.0 5) {
-                continue
+                continue;
             } else if (x - start <_ 5) then {
                 break;
             } else {
-                start := start * (x % 10)
+                start := start * (x % 10);
             }
         }
     }
