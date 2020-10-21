@@ -10,9 +10,8 @@ parser :: [Token] -> Either ParseError [Token]
 parser tokens = runParser programParser () "Error message" tokens
 
 main :: IO ()
-main = case parser (getTokens "programa.cbestasoh") of
+-- main = print((getTokens "programa.cb"))
+main =  case parser (getTokens "programa.cbestasoh") of
             { Left err -> print err;
               Right ans -> print ans
             }
-
-            -- print((getTokens "programinha.cb"))
