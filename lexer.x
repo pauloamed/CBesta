@@ -12,27 +12,9 @@ import System.IO.Unsafe
 $digit = 0-9          -- digits
 $alpha = [a-zA-Z]     -- alphabetic characters
 
-
----------------------- MAIN  -------------------------
 tokens :-
 
-    $white+                                  { \s -> (checkWhite(s))}
-    "//".*                                  ; -- ignora comentários
-    ("Int" | "Double" | "Bool" | "String")  { \s -> Type s}
-    return                                  { \s -> Return}
-    import                                  { \s -> Import}
-    main                                    { \s -> Main}
-    func                                    { \s -> Func}
-    proc                                    { \s -> Proc}
-    $alpha [$alpha $digit \_ \']*           { \s -> Id s}
-    "#"                                     { \s -> Hashtag}
-    ":"                                     { \s -> Colon}
-    ";"                                     { \s -> Semicolon}
-    ","                                     { \s -> Comma}
-    \.                                      { \s -> Dot}
-
-
------------------------ FLOW  ------------------------
+----------------------- FLOW  --------------------------
     if                                      { \s -> If}
     then                                    { \s -> Then}
     else                                    { \s -> Else}
@@ -43,12 +25,12 @@ tokens :-
 
 ---------------------- SCOPES  -------------------------
 
-    \{                                      { \s -> LeftBrace}
-    \}                                      { \s -> RightBrace}
     \(                                      { \s -> LeftParen}
     \)                                      { \s -> RightParen}
     \[                                      { \s -> LeftBracket}
     \]                                      { \s -> RightBracket}
+    \{                                      { \s -> LeftBrace}
+    \}                                      { \s -> RightBrace}
 
 --------------------- OPERADORES  --------------------------
 
@@ -77,30 +59,31 @@ tokens :-
 
 -------------------- LITERALS --------------------------
 
-    \-?$digit+\.$digit+                  { \s -> Double(read s) }
-    \-?$digit+                           { \s -> Int(read s) }
-    true                                { \s -> Bool(read s) }
-    false                               { \s -> Bool(read s) }
-    \"$alpha [$alpha $digit ! \_ \']*\" { \s -> String s}
+    \-?$digit+\.$digit+                     { \s -> Double(read s) }
+    \-?$digit+                              { \s -> Int(read s) }
+    true                                    { \s -> Bool(read s) }
+    false                                   { \s -> Bool(read s) }
+    \"$alpha [$alpha $digit ! \_ \']*\"     { \s -> String s}
+
+-------------------------- MAIN ------------------------------------
+    $white+                                  { \s -> (checkWhite(s))}
+    "//".*                                  ; -- ignora comentários
+    ("Int" | "Double" | "Bool" | "String")  { \s -> Type s}
+    return                                  { \s -> Return}
+    import                                  { \s -> Import}
+    main                                    { \s -> Main}
+    func                                    { \s -> Func}
+    proc                                    { \s -> Proc}
+    $alpha [$alpha $digit \_ \']*           { \s -> Id s}
+    "#"                                     { \s -> Hashtag}
+    ":"                                     { \s -> Colon}
+    ";"                                     { \s -> Semicolon}
+    ","                                     { \s -> Comma}
+    \.                                      { \s -> Dot}
 
 
 {
 data Token =
--- MAIN  ---------------------------------------------
-    Type String |
-    Id String |
-    Return |
-    Import |
-    Main |
-    Func |
-    Proc |
-    Hashtag |
-    Empty |
-    Semicolon |
-    Colon |
-    NewLine |
-    Comma |
-    Dot |
 -- FLOW  ---------------------------------------------
     If |
     Then |
@@ -110,12 +93,12 @@ data Token =
     Continue |
     Break |
 -- SCOPES  ---------------------------------------------
-    LeftBrace |
-    RightBrace |
     LeftParen |
     RightParen |
     LeftBracket |
     RightBracket |
+    LeftBrace |
+    RightBrace |
 -- OPERADORES  -----------------------------------------
     Assign |
     Mod |
@@ -143,7 +126,22 @@ data Token =
     Double Double |
     Int Int |
     Bool Bool |
-    String String
+    String String |
+-- MAIN  ---------------------------------------------
+    Type String |
+    Id String |
+    Return |
+    Import |
+    Main |
+    Func |
+    Proc |
+    Hashtag |
+    Empty |
+    Semicolon |
+    Colon |
+    NewLine |
+    Comma |
+    Dot 
     deriving (Eq,Show)
 
 checkWhite :: String -> Token
