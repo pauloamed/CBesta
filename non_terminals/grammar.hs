@@ -108,7 +108,7 @@ blockParser = (do   prefixBlock <- prefixBlockParser
 -- <prefix_block> -> <stmt> <separator> | <aux_block> | <ctrl_structure>
 prefixBlockParser :: Parsec [Token] st [Token]
 prefixBlockParser = (do   stmt <- stmtParser
-                          separator <- many1 separatorParser
+                          separator <- separatorParser
                           return (stmt)) <|>
                     (do   controlStructure <- controlStructureParser
                           return (controlStructure)) <|>
@@ -121,7 +121,7 @@ separatorParser :: Parsec [Token] st [Token]
 separatorParser =   (do   separator <- many1 separatorToken
                           return ([]))
 
--- <stmt> -> CONTINUE | BREAK | <return> | <assignment> |  TYPE ID | <expr>
+-- <stmt> -> CONTINUE | BREAK | <return> | <assignment> | <declr> | <expr>
 stmtParser :: Parsec [Token] st [Token]
 stmtParser =  (do continue <- continueToken
                   return ([continue])) <|>
@@ -131,9 +131,8 @@ stmtParser =  (do continue <- continueToken
                   return (returnn)) <|>
               (do assign <- assignParser
                   return (assign)) <|>
-              (do typee <- typeToken
-                  idd <- idToken
-                  return (typee:[idd])) <|>
+              (do declr <- declrParser
+                  return (declr)) <|>
               (do expr <- exprParser
                   return (expr))
 
@@ -200,7 +199,7 @@ maybeAssignParser = (do   assign <- assignParser
                     (return [])
 
 
--- <maybe_assign> -> <expr> | LAMBDA
+-- <maybe_expr> -> <expr> | LAMBDA
 maybeExprParser :: Parsec [Token] st [Token]
 maybeExprParser = (do   expr <- exprParser
                         return (expr)) <|>
@@ -216,24 +215,40 @@ returnParser = (do  ret <- returnToken
                     return [ret])
 
 
+-- <decl> -> TYPE ID <maybe_init>
+declrParser :: Parsec [Token] st [Token]
+declrParser =   (do   typee <- typeToken
+                      idd <- idToken
+                      maybeInit <- maybeInitParser
+                      return (typee:idd:maybeInit))
 
--- <assign> -> [ TYPE ] ID ASSIGN <expr>
+
+-- <maybe_init> -> ASSIGN <expr> | LAMBDA
+maybeInitParser :: Parsec [Token] st [Token]
+maybeInitParser =   (do   assign <- assignToken
+                          expr <- exprParser
+                          return (assign:expr)) <|>
+                    (return [])
+
+
+
+
+-- <assign> -> ID ASSIGN <expr>
 assignParser :: Parsec [Token] st [Token]
-assignParser = (do  typee <- typeToken
-                    idd <- idToken
+assignParser = (do  idd <- idToken
                     assign <- assignToken
                     expr <- exprParser
-                    return (typee:idd:assign:expr))
+                    return (idd:assign:expr))
 
 
--- <expr> -> <term> | <term> <binop> <expr> | <unop> <expr>
+-- <expr> -> <term> <binop> <expr> | <term> | <unop> <expr>
 exprParser :: Parsec [Token] st [Token]
 exprParser =  (do   term <- termParser
-                    return (term)) <|>
-              (do   term <- termParser
                     binop <- binopParser
                     expr <- exprParser
                     return (term ++ binop ++ expr)) <|>
+              (do   term <- termParser
+                    return (term)) <|>
               (do   unop <- unopParser
                     expr <- exprParser
                     return (unop ++ expr))
@@ -263,6 +278,7 @@ literalParser = (do   int <- intToken
                       return [double]) <|>
                 (do   string <- stringToken
                       return [string])
+
 
 -- <funcall> -> ID LEFT_PARENT <func_args> RIGHT_PARENT
 funcallParser :: Parsec [Token] st [Token]
