@@ -10,11 +10,11 @@ import OperatorsPrimTokens
 import ScopesPrimTokens
 
 
--- <program> -> { <import> } { <subpgrogram> }+
+-- <program> -> { <import> } { <subpgrogram> }
 programParser :: Parsec [Token] st [Token]
 programParser = do
             imports <- many importParser
-            subprograms <- many1 subprogramParser
+            subprograms <- many subprogramParser
             eof
             return ((concat imports) ++ (concat subprograms))
 
@@ -182,7 +182,7 @@ whileParser =   (do   while <- whileToken
                       return (while:leftParen:expr ++ rightParen:auxBlock))
 
 
--- <for> -> FOR LEFT_PARENT <maybe_assignment> SEMICOLON <maybe_expr> SEMICOLON <maybe_assignment> RIGHT_PARENT <aux_block>
+-- <for> -> FOR LEFT_PARENT <maybe_assignment_or_declr> SEMICOLON <maybe_expr> SEMICOLON <maybe_assignment> RIGHT_PARENT <aux_block>
 forParser :: Parsec [Token] st [Token]
 forParser =   (do   for <- forToken
                     leftParen <- leftParenToken
@@ -196,11 +196,14 @@ forParser =   (do   for <- forToken
                     return (for:leftParen:maybeAssign ++ semicolon:maybeExpr ++ semicolon:maybeAssign ++ rightParen:auxBlock))
 
 
--- <maybe_assign> -> <assign> | LAMBDA
+-- <maybe_assignment_or_declr> -> <assign> | <declr> | LAMBDA
 maybeAssignParser :: Parsec [Token] st [Token]
 maybeAssignParser = (do   assign <- assignParser
                           return (assign)) <|>
+                    (do   declr <- declrParser
+                          return (declr)) <|>
                     (return [])
+
 
 
 -- <maybe_expr> -> <expr> | LAMBDA
@@ -210,16 +213,14 @@ maybeExprParser = (do   expr <- exprParser
                   (return [])
 
 
--- <return> -> RETURN [ <expr> ]
+-- <return> -> RETURN <maybe_expr>
 returnParser :: Parsec [Token] st [Token]
 returnParser = (do  ret <- returnToken
-                    expr <- exprParser
-                    return (ret:expr)) <|>
-               (do  ret <- returnToken
-                    return [ret])
+                    maybeExpr <- maybeExprParser
+                    return (ret:maybeExpr))
 
 
--- <decl> -> TYPE ID <maybe_init>
+-- <declr> -> TYPE ID <maybe_init>
 declrParser :: Parsec [Token] st [Token]
 declrParser =   (do   typee <- typeToken
                       idd <- idToken
@@ -264,15 +265,16 @@ maybeBinopParser =  (do   binop <- binopParser
 -- <term> -> ID | <literal> | <funcall> | LEFT_PARENT <expr> RIGHT_PARENT
 termParser :: Parsec [Token] st [Token]
 termParser =  (do   idd <- idToken
-                    return ([idd])) <|>
+                    maybeFuncall <- maybeFuncallParser
+                    return (idd:maybeFuncall)) <|>
               (do   lit <- literalParser
                     return (lit)) <|>
-              (do   funcall <- funcallParser
-                    return (funcall)) <|>
               (do   leftParen <- leftParenToken
                     expr <- exprParser
                     rightParen <- rightParenToken
                     return (leftParen:expr ++ [rightParen]))
+
+--
 
 
 -- <literal> -> INT | BOOL | DOUBLE | STRING
@@ -287,12 +289,13 @@ literalParser = (do   int <- intToken
                       return [string])
 
 
--- <funcall> -> ID LEFT_PARENT <func_args> RIGHT_PARENT
-funcallParser :: Parsec [Token] st [Token]
-funcallParser = (do   leftParen <- leftParenToken
-                      funcArgs <- funcArgsParser
-                      rightParen <- rightParenToken
-                      return (leftParen:funcArgs ++ [rightParen]))
+-- <maybe_funcall> -> LEFT_PARENT <func_args> RIGHT_PARENT | LAMBDA
+maybeFuncallParser :: Parsec [Token] st [Token]
+maybeFuncallParser =  (do   leftParen <- leftParenToken
+                            funcArgs <- funcArgsParser
+                            rightParen <- rightParenToken
+                            return (leftParen:funcArgs ++ [rightParen])) <|>
+                      (return [])
 
 
 -- <func_args> -> <expr> { <funcArgsAuxParser> } | LAMBDA
@@ -355,6 +358,10 @@ boolOpParser =  (do   x <- lessThanToken
                 (do   x <- equalsToken
                       return ([x])) <|>
                 (do   x <- differenceToken
+                      return ([x])) <|>
+                (do   x <- andToken
+                      return ([x])) <|>
+                (do   x <- orToken
                       return ([x]))
 --
 -- sub :: Parsec [Token] st [Token]
