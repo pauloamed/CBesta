@@ -134,12 +134,10 @@ stmtParser =  (do continue <- continueToken
                   return ([breakk])) <|>
               (do returnn <- returnParser
                   return (returnn)) <|>
-              (do assign <- assignParser
-                  return (assign)) <|>
               (do declr <- declrParser
                   return (declr)) <|>
-              (do expr <- exprParser
-                  return (expr))
+              (do exprOrAssign <- exprOrAssignParser
+                  return (exprOrAssign))
 
 
 -- <assign> -> ID ASSIGN <expr>
@@ -150,11 +148,40 @@ assignParser = (do  idd <- idToken
                     return (idd:assign:expr))
 
 
--- <expr_or_assign> -> <term> <maybe_binop> | <unop> <expr> | ID ASSIGN <expr>
--- <expr_or_assign> -> ID <maybe_funcall> <maybe_binop> | ID ASSIGN <expr> | <literal> <maybe_binop> | LEFT_PARENT <expr> RIGHT_PARENT <maybe_binop> | <unop> <expr> |
+-- <expr_or_assign> -> ID <maybe_funcall_or_assign> | <literal> <maybe_binop> | LEFT_PARENT <expr> RIGHT_PARENT <maybe_binop> | <unop> <expr>
 exprOrAssignParser :: Parsec [Token] st [Token]
-exprOrAssignParser =
+exprOrAssignParser =  (do   idd <- idToken
+                            maybeFuncallOrAssign <- maybeFuncallOrAssignParser
+                            return (idd:maybeFuncallOrAssign)) <|>
+                      (do   lit <- literalParser
+                            maybeBinop <- maybeBinopParser
+                            return (lit ++ maybeBinop)) <|>
+                      (do   leftParen <- leftParenToken
+                            expr <- exprParser
+                            rightParen <- rightParenToken
+                            maybeBinop <- maybeBinopParser
+                            return (leftParen:expr ++ rightParen:maybeBinop)) <|>
+                      (do   unop <- unopParser
+                            expr <- exprParser
+                            return (unop ++ expr))
 
+
+-- <maybe_funcall_or_assign> -> <maybe_funcall> <maybe_binop> | ASSIGN <expr>
+maybeFuncallOrAssignParser :: Parsec [Token] st [Token]
+maybeFuncallOrAssignParser =  (do   assign <- assignToken
+                                    expr <- exprParser
+                                    return (assign:expr)) <|>
+                              (do   maybeFuncall <- maybeFuncallParser
+                                    maybeBinop <- maybeBinopParser
+                                    return (maybeFuncall ++ maybeBinop))
+
+
+-- <maybe_binop> -> <binop> <expr> | LAMBDA
+maybeBinopParser :: Parsec [Token] st [Token]
+maybeBinopParser =  (do   binop <- binopParser
+                          expr <- exprParser
+                          return (binop ++ expr)) <|>
+                    (return [])
 
 
 -- <expr> -> <term> <maybe_binop> | <unop> <expr>
@@ -296,14 +323,6 @@ maybeInitParser :: Parsec [Token] st [Token]
 maybeInitParser =   (do   assign <- assignToken
                           expr <- exprParser
                           return (assign:expr)) <|>
-                    (return [])
-
-
--- <maybe_binop> -> <binop> <expr> | LAMBDA
-maybeBinopParser :: Parsec [Token] st [Token]
-maybeBinopParser =  (do   binop <- binopParser
-                          expr <- exprParser
-                          return (binop ++ expr)) <|>
                     (return [])
 
 
