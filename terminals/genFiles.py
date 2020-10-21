@@ -7,12 +7,12 @@ for line in input_str.split('\n'):
     if line == "": continue
 
     lineTokens = line.split(' ')
-    hasArg = (len(lineTokens) == 3)
+    hasArg = (len(lineTokens) == 4)
     tokens.append((lineTokens[0], hasArg))
 
 annot = "{}Token :: Parsec [Token] st Token"
 header = "{}Token = tokenPrim show update_pos get_token where"
-firstLine = ["get_token {} = Just {}", "get_token ({} x) = Just ({} x)"]
+firstLine = ["get_token ({} p)  = Just ({} p) ", "get_token ({} p x) = Just ({} p x)"]
 secondLine = "get_token _  = Nothing"
 
 for token, hasArg in tokens:
