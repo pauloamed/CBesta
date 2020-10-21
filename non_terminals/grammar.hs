@@ -10,6 +10,8 @@ import OperatorsPrimTokens
 import ScopesPrimTokens
 
 
+
+
 -- <program> -> { <import> } { <subpgrogram> }
 programParser :: Parsec [Token] st [Token]
 programParser = do
@@ -19,16 +21,14 @@ programParser = do
             return ((concat imports) ++ (concat subprograms))
 
 
--- <import> -> HASHTAG IMPORT LESS_THAN NAME GREATER_THAN
+-- <import> -> HASHTAG IMPORT NAME
 importParser :: Parsec [Token] st [Token]
 importParser = do
             hashtag <- hashtagToken
             importt <- importToken
-            lessThan <- lessThanToken
-            fileName <- idToken -- ?
-            greaterThan <- greaterThanToken
+            fileName <- stringToken
             sep <- many1 separatorParser
-            return (hashtag:importt:lessThan:fileName:[greaterThan])
+            return (hashtag:importt:[fileName])
 
 
 -- <subprogram> -> <func> | <proc> | <block>
@@ -62,7 +62,7 @@ procParser =  (do   procc <- procToken
                     return (procc:idd:auxArgs ++ auxBlock))
 
 
--- <aux_args> -> LEFT_PAREN [ <args> ] RIGHT_PAREN
+-- <aux_args> -> LEFT_PAREN <args> RIGHT_PAREN
 auxArgsParser :: Parsec [Token] st [Token]
 auxArgsParser = (do   leftParen <- leftParenToken
                       args <- argsParser
@@ -70,12 +70,12 @@ auxArgsParser = (do   leftParen <- leftParenToken
                       return (leftParen:args ++ [rightParen]))
 
 
--- <aux_block> -> LEFT_PAREN [ <args> ] RIGHT_PAREN
+-- <aux_block> -> LEFT_BRACE <maybe_block> RIGHT_BRACE
 auxBlockParser :: Parsec [Token] st [Token]
 auxBlockParser = (do  leftBrace <- leftBraceToken
-                      block <- blockParser
+                      maybeBlock <- maybeBlockParser
                       rightBrace <- rightBraceToken
-                      return (leftBrace:block ++ [rightBrace]))
+                      return (leftBrace:maybeBlock ++ [rightBrace]))
 
 
 -- <args> -> TYPE ID { <arg> } | LAMBDA
@@ -102,6 +102,13 @@ blockParser = (do   prefixBlock <- prefixBlockParser
                     return (prefixBlock ++ (concat blocks)))
 
 
+-- <maybe_block> -> <block> | LAMBDA
+maybeBlockParser :: Parsec [Token] st [Token]
+maybeBlockParser =  (do   block <- blockParser
+                          return (block))  <|>
+                    (return [])
+
+
 -- <prefix_block> -> <stmt> <separator> | <aux_block> | <ctrl_structure>
 prefixBlockParser :: Parsec [Token] st [Token]
 prefixBlockParser = (do   stmt <- stmtParser
@@ -118,7 +125,8 @@ separatorParser :: Parsec [Token] st [Token]
 separatorParser =   (do   separator <- many1 separatorToken
                           return ([]))
 
--- <stmt> -> CONTINUE | BREAK | <return> | <assignment> | <declr> | <expr>
+
+-- <stmt> -> CONTINUE | BREAK | <return> | <declr> | <expr_or_assignment>
 stmtParser :: Parsec [Token] st [Token]
 stmtParser =  (do continue <- continueToken
                   return ([continue])) <|>
@@ -132,6 +140,54 @@ stmtParser =  (do continue <- continueToken
                   return (declr)) <|>
               (do expr <- exprParser
                   return (expr))
+
+
+-- <assign> -> ID ASSIGN <expr>
+assignParser :: Parsec [Token] st [Token]
+assignParser = (do  idd <- idToken
+                    assign <- assignToken
+                    expr <- exprParser
+                    return (idd:assign:expr))
+
+
+-- <expr_or_assign> -> <term> <maybe_binop> | <unop> <expr> | ID ASSIGN <expr>
+-- <expr_or_assign> -> ID <maybe_funcall> <maybe_binop> | ID ASSIGN <expr> | <literal> <maybe_binop> | LEFT_PARENT <expr> RIGHT_PARENT <maybe_binop> | <unop> <expr> |
+exprOrAssignParser :: Parsec [Token] st [Token]
+exprOrAssignParser =
+
+
+
+-- <expr> -> <term> <maybe_binop> | <unop> <expr>
+exprParser :: Parsec [Token] st [Token]
+exprParser =  (do   term <- termParser
+                    maybeBinop <- maybeBinopParser
+                    return (term ++ maybeBinop)) <|>
+              (do   unop <- unopParser
+                    expr <- exprParser
+                    return (unop ++ expr))
+
+
+-- <term> ->  <id_or_funcall> | <literal> | LEFT_PARENT <expr> RIGHT_PARENT
+-- <id_or_funcall> -> ID <maybe_funcall>
+termParser :: Parsec [Token] st [Token]
+termParser =  (do   idd <- idToken
+                    maybeFuncall <- maybeFuncallParser
+                    return (idd:maybeFuncall)) <|>
+              (do   lit <- literalParser
+                    return (lit)) <|>
+              (do   leftParen <- leftParenToken
+                    expr <- exprParser
+                    rightParen <- rightParenToken
+                    return (leftParen:expr ++ [rightParen]))
+
+
+-- <maybe_funcall> -> LEFT_PARENT <func_args> RIGHT_PARENT | LAMBDA
+maybeFuncallParser :: Parsec [Token] st [Token]
+maybeFuncallParser =  (do   leftParen <- leftParenToken
+                            funcArgs <- funcArgsParser
+                            rightParen <- rightParenToken
+                            return (leftParen:funcArgs ++ [rightParen])) <|>
+                      (return [])
 
 
 -- <ctrl_structure> -> <while> | <for> | <if>
@@ -186,22 +242,29 @@ whileParser =   (do   while <- whileToken
 forParser :: Parsec [Token] st [Token]
 forParser =   (do   for <- forToken
                     leftParen <- leftParenToken
-                    maybeAssign <- maybeAssignParser
+                    maybeAssignOrDeclr <- maybeAssignOrDeclrParser
                     semicolon <- separatorToken
                     maybeExpr <- maybeExprParser
                     semicolon <- separatorToken
                     maybeAssign <- maybeAssignParser
                     rightParen <- rightParenToken
                     auxBlock <- auxBlockParser
-                    return (for:leftParen:maybeAssign ++ semicolon:maybeExpr ++ semicolon:maybeAssign ++ rightParen:auxBlock))
+                    return (for:leftParen:maybeAssignOrDeclr ++ semicolon:maybeExpr ++ semicolon:maybeAssign ++ rightParen:auxBlock))
 
 
 -- <maybe_assignment_or_declr> -> <assign> | <declr> | LAMBDA
+maybeAssignOrDeclrParser :: Parsec [Token] st [Token]
+maybeAssignOrDeclrParser =  (do   assign <- assignParser
+                                  return (assign)) <|>
+                            (do   declr <- declrParser
+                                  return (declr)) <|>
+                            (return [])
+
+
+-- <maybe_assignment> -> <assign> | LAMBDA
 maybeAssignParser :: Parsec [Token] st [Token]
 maybeAssignParser = (do   assign <- assignParser
                           return (assign)) <|>
-                    (do   declr <- declrParser
-                          return (declr)) <|>
                     (return [])
 
 
@@ -236,45 +299,12 @@ maybeInitParser =   (do   assign <- assignToken
                     (return [])
 
 
--- <assign> -> ID ASSIGN <expr>
-assignParser :: Parsec [Token] st [Token]
-assignParser = (do  idd <- idToken
-                    assign <- assignToken
-                    expr <- exprParser
-                    return (idd:assign:expr))
-
-
--- <expr> -> <term> <maybe_binop_parser> | <unop> <expr>
-exprParser :: Parsec [Token] st [Token]
-exprParser =  (do   term <- termParser
-                    maybeBinop <- maybeBinopParser
-                    return (term ++ maybeBinop)) <|>
-              (do   unop <- unopParser
-                    expr <- exprParser
-                    return (unop ++ expr))
-
-
--- <maybe_binop_parser> -> <binop> <expr> | LAMBDA
+-- <maybe_binop> -> <binop> <expr> | LAMBDA
 maybeBinopParser :: Parsec [Token] st [Token]
 maybeBinopParser =  (do   binop <- binopParser
                           expr <- exprParser
                           return (binop ++ expr)) <|>
                     (return [])
-
-
--- <term> -> ID | <literal> | <funcall> | LEFT_PARENT <expr> RIGHT_PARENT
-termParser :: Parsec [Token] st [Token]
-termParser =  (do   idd <- idToken
-                    maybeFuncall <- maybeFuncallParser
-                    return (idd:maybeFuncall)) <|>
-              (do   lit <- literalParser
-                    return (lit)) <|>
-              (do   leftParen <- leftParenToken
-                    expr <- exprParser
-                    rightParen <- rightParenToken
-                    return (leftParen:expr ++ [rightParen]))
-
---
 
 
 -- <literal> -> INT | BOOL | DOUBLE | STRING
@@ -287,15 +317,6 @@ literalParser = (do   int <- intToken
                       return [double]) <|>
                 (do   string <- stringToken
                       return [string])
-
-
--- <maybe_funcall> -> LEFT_PARENT <func_args> RIGHT_PARENT | LAMBDA
-maybeFuncallParser :: Parsec [Token] st [Token]
-maybeFuncallParser =  (do   leftParen <- leftParenToken
-                            funcArgs <- funcArgsParser
-                            rightParen <- rightParenToken
-                            return (leftParen:funcArgs ++ [rightParen])) <|>
-                      (return [])
 
 
 -- <func_args> -> <expr> { <funcArgsAuxParser> } | LAMBDA
