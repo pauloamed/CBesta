@@ -61,8 +61,8 @@ tokens :-
 
     \-?$digit+\.$digit+                     { \p s -> Double p (read s) }
     \-?$digit+                              { \p s -> Int p (read s) }
-    true                                    { \p s -> Bool p (read s) }
-    false                                   { \p s -> Bool p (read s) }
+    "true"                                  { \p s -> Bool p (read s) }
+    "false"                                 { \p s -> Bool p (read s) }
     \"$alpha [$alpha $digit ! \_ \']*\"     { \p s -> String p s }
 
 -------------------------- MAIN ------------------------------------
