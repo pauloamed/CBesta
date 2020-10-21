@@ -53,24 +53,21 @@ funcParser = (do
             return (func:typee:idd:auxArgs ++ auxBlock))
 
 
--- <proc> -> PROC TYPE ID <aux_args> <aux_blocks>
+-- <proc> -> PROC ID <aux_args> <aux_blocks>
 procParser :: Parsec [Token] st [Token]
-procParser = do
-            procc <- procToken
-            typee <- typeToken
-            idd <- idToken
-            auxArgs <- auxArgsParser
-            auxBlock <- auxBlockParser
-            return (procc:typee:idd:auxArgs ++ auxBlock)
+procParser =  (do   procc <- procToken
+                    idd <- idToken
+                    auxArgs <- auxArgsParser
+                    auxBlock <- auxBlockParser
+                    return (procc:idd:auxArgs ++ auxBlock))
 
 
 -- <aux_args> -> LEFT_PAREN [ <args> ] RIGHT_PAREN
 auxArgsParser :: Parsec [Token] st [Token]
-auxArgsParser = do
-            leftParen <- leftParenToken
-            args <- argsParser
-            rightParen <- rightParenToken
-            return (leftParen:args ++ [rightParen])
+auxArgsParser = (do   leftParen <- leftParenToken
+                      args <- argsParser
+                      rightParen <- rightParenToken
+                      return (leftParen:args ++ [rightParen]))
 
 
 -- <aux_block> -> LEFT_PAREN [ <args> ] RIGHT_PAREN
@@ -136,6 +133,7 @@ stmtParser =  (do continue <- continueToken
               (do expr <- exprParser
                   return (expr))
 
+
 -- <ctrl_structure> -> <while> | <for> | <if>
 controlStructureParser :: Parsec [Token] st [Token]
 controlStructureParser =  (do   while <- whileParser
@@ -158,14 +156,20 @@ ifParser =  (do   iff <- ifToken
                   return (iff:leftParen:expr ++ rightParen:thenn:auxBlock ++ maybeElse))
 
 
--- <maybe_else> -> ELSE (<if> | <aux_block>)
+-- <maybe_else> -> ELSE <if_or_aux_block> | LAMBDA
 maybeElseParser :: Parsec [Token] st [Token]
 maybeElseParser =   (do   elsee <- elseToken
-                          ifBody <- ifParser
-                          return (elsee:ifBody)) <|>
-                    (do   elsee <- elseToken
-                          auxBlockBody <- auxBlockParser
-                          return (elsee:auxBlockBody))
+                          ifOrAuxBlock <- ifOrAuxBlockParser
+                          return (elsee:ifOrAuxBlock)) <|>
+                    (return [])
+
+
+-- <if_or_aux_block> -> <if> | <aux_block>
+ifOrAuxBlockParser :: Parsec [Token] st [Token]
+ifOrAuxBlockParser =  (do   iff <- ifParser
+                            return (iff)) <|>
+                      (do   auxBlock <- auxBlockParser
+                            return (auxBlock))
 
 
 -- <while> -> WHILE LEFT_PARENT <expr> RIGHT_PARENT <aux_block>
@@ -231,8 +235,6 @@ maybeInitParser =   (do   assign <- assignToken
                     (return [])
 
 
-
-
 -- <assign> -> ID ASSIGN <expr>
 assignParser :: Parsec [Token] st [Token]
 assignParser = (do  idd <- idToken
@@ -241,17 +243,22 @@ assignParser = (do  idd <- idToken
                     return (idd:assign:expr))
 
 
--- <expr> -> <term> <binop> <expr> | <term> | <unop> <expr>
+-- <expr> -> <term> <maybe_binop_parser> | <unop> <expr>
 exprParser :: Parsec [Token] st [Token]
 exprParser =  (do   term <- termParser
-                    binop <- binopParser
-                    expr <- exprParser
-                    return (term ++ binop ++ expr)) <|>
-              (do   term <- termParser
-                    return (term)) <|>
+                    maybeBinop <- maybeBinopParser
+                    return (term ++ maybeBinop)) <|>
               (do   unop <- unopParser
                     expr <- exprParser
                     return (unop ++ expr))
+
+
+-- <maybe_binop_parser> -> <binop> <expr> | LAMBDA
+maybeBinopParser :: Parsec [Token] st [Token]
+maybeBinopParser =  (do   binop <- binopParser
+                          expr <- exprParser
+                          return (binop ++ expr)) <|>
+                    (return [])
 
 
 -- <term> -> ID | <literal> | <funcall> | LEFT_PARENT <expr> RIGHT_PARENT
@@ -271,7 +278,7 @@ termParser =  (do   idd <- idToken
 -- <literal> -> INT | BOOL | DOUBLE | STRING
 literalParser :: Parsec [Token] st [Token]
 literalParser = (do   int <- intToken
-                      return ([int])) <|>
+                      return [int]) <|>
                 (do   bool <- boolToken
                       return [bool]) <|>
                 (do   double <- doubleToken
