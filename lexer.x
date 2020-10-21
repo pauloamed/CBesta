@@ -71,7 +71,6 @@ tokens :-
     ("Int" | "Double" | "Bool" | "String")  { \p s -> Type p s }
     return                                  { \p s -> Return p }
     import                                  { \p s -> Import p }
-    main                                    { \p s -> Main p }
     func                                    { \p s -> Func p }
     proc                                    { \p s -> Proc p }
     $alpha [$alpha $digit \_ \']*           { \p s -> Id p s }
@@ -132,7 +131,6 @@ data Token =
     Id AlexPosn String |
     Return AlexPosn |
     Import AlexPosn |
-    Main AlexPosn |
     Func AlexPosn |
     Proc AlexPosn |
     Hashtag AlexPosn |
