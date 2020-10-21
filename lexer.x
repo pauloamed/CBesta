@@ -1,5 +1,5 @@
 {
-module Lexer (Token(..), alexScanTokens, getTokens) where
+module Lexer (Token(..), AlexPosn(..), alexScanTokens, getTokens) where
 
 import System.IO
 import System.IO.Unsafe
@@ -7,7 +7,7 @@ import System.IO.Unsafe
 
 
 
-%wrapper "basic"
+%wrapper "posn"
 
 $digit = 0-9          -- digits
 $alpha = [a-zA-Z]     -- alphabetic characters
@@ -15,143 +15,138 @@ $alpha = [a-zA-Z]     -- alphabetic characters
 tokens :-
 
 ----------------------- FLOW  --------------------------
-    if                                      { \s -> If}
-    then                                    { \s -> Then}
-    else                                    { \s -> Else}
-    while                                   { \s -> While}
-    for                                     { \s -> For}
-    continue                                { \s -> Continue}
-    break                                   { \s -> Break}
+    if                                      { \p s -> If p }
+    then                                    { \p s -> Then p }
+    else                                    { \p s -> Else p }
+    while                                   { \p s -> While p }
+    for                                     { \p s -> For p }
+    continue                                { \p s -> Continue p }
+    break                                   { \p s -> Break p }
 
 ---------------------- SCOPES  -------------------------
 
-    \(                                      { \s -> LeftParen}
-    \)                                      { \s -> RightParen}
-    \[                                      { \s -> LeftBracket}
-    \]                                      { \s -> RightBracket}
-    \{                                      { \s -> LeftBrace}
-    \}                                      { \s -> RightBrace}
+    \(                                      { \p s -> LeftParen p }
+    \)                                      { \p s -> RightParen p }
+    \[                                      { \p s -> LeftBracket p }
+    \]                                      { \p s -> RightBracket p }
+    \{                                      { \p s -> LeftBrace p }
+    \}                                      { \p s -> RightBrace p }
 
 --------------------- OPERADORES  --------------------------
 
-    :=                                      { \s -> Assign}
-    "%"                                     { \s -> Mod}
-    \^                                      { \s -> Expo}
-    \+                                      { \s -> Plus}
-    \-                                      { \s -> Minus}
-    \*                                      { \s -> Times}
-    "/"                                     { \s -> Div}
-    "<"                                     { \s -> LessThan}
-    >                                       { \s -> GreaterThan}
-    "<"=                                    { \s -> LessEquals}
-    >=                                      { \s -> GreaterEquals}
-    ==                                      { \s -> Equals}
-    !=                                      { \s -> Difference}
-    "<"\_                                   { \s -> LessThan_}
-    >\_                                     { \s -> GreaterThan_}
-    "<"=\_                                  { \s -> LessEquals_}
-    >=\_                                    { \s -> GreaterEquals_}
-    ==\_                                    { \s -> Equals_}
-    !=\_                                    { \s -> Difference_}
-    !                                       { \s -> Negation}
-    (&& | and)                              { \s -> And}
-    (\|\| | or)                             { \s -> Or}
+    :=                                      { \p s -> Assign p }
+    "%"                                     { \p s -> Mod p }
+    \^                                      { \p s -> Expo p }
+    \+                                      { \p s -> Plus p }
+    \-                                      { \p s -> Minus p }
+    \*                                      { \p s -> Times p }
+    "/"                                     { \p s -> Div p }
+    "<"                                     { \p s -> LessThan p }
+    >                                       { \p s -> GreaterThan p }
+    "<"=                                    { \p s -> LessEquals p }
+    >=                                      { \p s -> GreaterEquals p }
+    ==                                      { \p s -> Equals p }
+    !=                                      { \p s -> Difference p }
+    "<"\_                                   { \p s -> LessThan_ p }
+    >\_                                     { \p s -> GreaterThan_ p }
+    "<"=\_                                  { \p s -> LessEquals_ p }
+    >=\_                                    { \p s -> GreaterEquals_ p }
+    ==\_                                    { \p s -> Equals_ p }
+    !=\_                                    { \p s -> Difference_ p }
+    !                                       { \p s -> Negation p }
+    (&& | and)                              { \p s -> And p }
+    (\|\| | or)                             { \p s -> Or p }
 
 -------------------- LITERALS --------------------------
 
-    \-?$digit+\.$digit+                     { \s -> Double(read s) }
-    \-?$digit+                              { \s -> Int(read s) }
-    true                                    { \s -> Bool(read s) }
-    false                                   { \s -> Bool(read s) }
-    \"$alpha [$alpha $digit ! \_ \']*\"     { \s -> String s}
+    \-?$digit+\.$digit+                     { \p s -> Double p (read s) }
+    \-?$digit+                              { \p s -> Int p (read s) }
+    true                                    { \p s -> Bool p (read s) }
+    false                                   { \p s -> Bool p (read s) }
+    \"$alpha [$alpha $digit ! \_ \']*\"     { \p s -> String p s }
 
 -------------------------- MAIN ------------------------------------
-    $white+                                  { \s -> (checkWhite(s))}
+    $white+                                 ;
     "//".*                                  ; -- ignora comentários
-    ("Int" | "Double" | "Bool" | "String")  { \s -> Type s}
-    return                                  { \s -> Return}
-    import                                  { \s -> Import}
-    main                                    { \s -> Main}
-    func                                    { \s -> Func}
-    proc                                    { \s -> Proc}
-    $alpha [$alpha $digit \_ \']*           { \s -> Id s}
-    "#"                                     { \s -> Hashtag}
-    ":"                                     { \s -> Colon}
-    ";"                                     { \s -> Semicolon}
-    ","                                     { \s -> Comma}
-    \.                                      { \s -> Dot}
+    ("Int" | "Double" | "Bool" | "String")  { \p s -> Type p s }
+    return                                  { \p s -> Return p }
+    import                                  { \p s -> Import p }
+    main                                    { \p s -> Main p }
+    func                                    { \p s -> Func p }
+    proc                                    { \p s -> Proc p }
+    $alpha [$alpha $digit \_ \']*           { \p s -> Id p s }
+    "#"                                     { \p s -> Hashtag p }
+    ":"                                     { \p s -> Colon p }
+    ";"                                     { \p s -> Separator p }
+    ","                                     { \p s -> Comma p }
+    \.                                      { \p s -> Dot p }
 
 
 {
 data Token =
 -- FLOW  ---------------------------------------------
-    If |
-    Then |
-    Else |
-    While |
-    For |
-    Continue |
-    Break |
+    If AlexPosn |
+    Then AlexPosn |
+    Else AlexPosn |
+    While AlexPosn |
+    For AlexPosn |
+    Continue AlexPosn |
+    Break AlexPosn |
 -- SCOPES  ---------------------------------------------
-    LeftParen |
-    RightParen |
-    LeftBracket |
-    RightBracket |
-    LeftBrace |
-    RightBrace |
+    LeftBrace AlexPosn |
+    RightBrace AlexPosn |
+    LeftParen AlexPosn |
+    RightParen AlexPosn |
+    LeftBracket AlexPosn |
+    RightBracket AlexPosn |
 -- OPERADORES  -----------------------------------------
-    Assign |
-    Mod |
-    Expo |
-    Plus |
-    Minus |
-    Times |
-    Div |
-    LessThan |
-    GreaterThan |
-    LessEquals |
-    GreaterEquals |
-    Equals |
-    Difference |
-    LessThan_ |
-    GreaterThan_ |
-    LessEquals_ |
-    GreaterEquals_ |
-    Equals_ |
-    Difference_ |
-    Negation |
-    And |
-    Or |
+    Assign AlexPosn |
+    Mod  AlexPosn |
+    Expo AlexPosn |
+    Plus AlexPosn |
+    Minus AlexPosn |
+    Times AlexPosn |
+    Div AlexPosn |
+    LessThan AlexPosn |
+    GreaterThan AlexPosn |
+    LessEquals AlexPosn |
+    GreaterEquals AlexPosn |
+    Equals AlexPosn |
+    Difference AlexPosn |
+    LessThan_ AlexPosn |
+    GreaterThan_ AlexPosn |
+    LessEquals_ AlexPosn |
+    GreaterEquals_ AlexPosn |
+    Equals_ AlexPosn |
+    Difference_ AlexPosn |
+    Negation AlexPosn |
+    And AlexPosn |
+    Or AlexPosn |
 -- LITERALS  -------------------------------------------
-    Double Double |
-    Int Int |
-    Bool Bool |
-    String String |
+    Double AlexPosn Double |
+    Int AlexPosn Int |
+    Bool AlexPosn Bool |
+    String AlexPosn String |
 -- MAIN  ---------------------------------------------
-    Type String |
-    Id String |
-    Return |
-    Import |
-    Main |
-    Func |
-    Proc |
-    Hashtag |
-    Empty |
-    Semicolon |
-    Colon |
-    NewLine |
-    Comma |
-    Dot 
+    Type AlexPosn String |
+    Id AlexPosn String |
+    Return AlexPosn |
+    Import AlexPosn |
+    Main AlexPosn |
+    Func AlexPosn |
+    Proc AlexPosn |
+    Hashtag AlexPosn |
+    Separator AlexPosn |
+    Colon AlexPosn |
+    Comma AlexPosn |
+    Dot AlexPosn
     deriving (Eq,Show)
 
-checkWhite :: String -> Token
-checkWhite s  | elem '\n' s = NewLine
-              | otherwise = Empty
 
 
 getTokens fn = unsafePerformIO (getTokensAux fn)
 
 getTokensAux fn = do {fh <- openFile fn ReadMode;
                     s <- hGetContents fh;
-                    return (filter (/= Empty) (alexScanTokens s))}
+                    return (alexScanTokens s)}
 }
