@@ -184,9 +184,9 @@ forParser :: Parsec [Token] st [Token]
 forParser =   (do   for <- forToken
                     leftParen <- leftParenToken
                     maybeAssign <- maybeAssignParser
-                    semicolon <- semicolonToken
+                    semicolon <- separatorToken
                     maybeExpr <- maybeExprParser
-                    semicolon <- semicolonToken
+                    semicolon <- separatorToken
                     maybeAssign <- maybeAssignParser
                     rightParen <- rightParenToken
                     auxBlock <- auxBlockParser
