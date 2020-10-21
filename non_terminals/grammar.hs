@@ -116,12 +116,10 @@ prefixBlockParser = (do   stmt <- stmtParser
                           return (auxBlock))
 
 
--- <separator> -> SEMICOLON | NEWLINE
+-- <separator> -> SEPARATOR
 separatorParser :: Parsec [Token] st [Token]
-separatorParser =   (do   semicolon <- semicolonToken
-                          return ([semicolon])) <|>
-                    (do   newLine <- newLineToken
-                          return ([newLine]))
+separatorParser =   (do   separator <- many1 separatorToken
+                          return ([]))
 
 -- <stmt> -> CONTINUE | BREAK | <return> | <assignment> |  TYPE ID | <expr>
 stmtParser :: Parsec [Token] st [Token]
