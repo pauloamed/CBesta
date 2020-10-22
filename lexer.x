@@ -63,7 +63,7 @@ tokens :-
     \-?$digit+                              { \p s -> Int p (read s) }
     "true"                                  { \p s -> Bool p (read s) }
     "false"                                 { \p s -> Bool p (read s) }
-    \"$alpha [$alpha $digit ! \_ \' \ ]*\"  { \p s -> String p s }
+    \"[^\"]*\"                              { \p s -> String p s }
 
 -------------------------- MAIN ------------------------------------
     $white+                                 ;
@@ -73,7 +73,7 @@ tokens :-
     import                                  { \p s -> Import p }
     func                                    { \p s -> Func p }
     proc                                    { \p s -> Proc p }
-    $alpha [$alpha $digit \_ \']*           { \p s -> Id p s }
+    $alpha [$alpha $digit \_]*              { \p s -> Id p s }
     "#"                                     { \p s -> Hashtag p }
     ":"                                     { \p s -> Colon p }
     ";"                                     { \p s -> Separator p }
