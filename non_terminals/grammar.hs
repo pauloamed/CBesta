@@ -11,7 +11,6 @@ import ScopesPrimTokens
 
 
 
-
 -- <program> -> { <import> } { <subpgrogram> }
 programParser :: Parsec [Token] st [Token]
 programParser = do
@@ -215,6 +214,34 @@ maybeFuncallParser =  (do   leftParen <- leftParenToken
                             rightParen <- rightParenToken
                             return (leftParen:funcArgs ++ [rightParen])) <|>
                       (return [])
+
+
+-- <split_string> -> ( ID | STRING ) LEFT_BRACKET [ ( INT | ID ) ] COLON [ ( INT | ID ) ] RIGHT_BRACKET
+splitStringParser :: Parsec [Token] st [Token]
+splitStringParser = (do       idOrString <- idOrStringParser
+                              leftBracket <- leftBracketToken
+                              maybeIntOrId <- maybeIntOrIdParser
+                              colon <- colonToken
+                              maybeIntOrId <- maybeIntOrIdParser
+                              rightBracket <- rightBracketToken
+                              return (idOrString ++ [leftBracket] ++ maybeIntOrId ++ [colon] ++ maybeIntOrId ++ [rightBracket]))
+
+
+-- <maybe_int_or_id> -> INT | ID | LAMBIDA_EM_BERTAO
+maybeIntOrIdParser :: Parsec [Token] st [Token]
+maybeIntOrIdParser = (do      int <- intToken
+                              return ([int])) <|>
+                     (do      idd <- idToken
+                              return ([idd])) <|>
+                     (return [])
+
+
+-- <id_or_string> -> ID | STRING 
+idOrStringParser :: Parsec [Token] st [Token]
+idOrStringParser = (do   idd <- idToken
+                         return ([idd])) <|>
+                   (do   string <- stringToken
+                         return ([string]))
 
 
 -- <ctrl_structure> -> <while> | <for> | <if>
