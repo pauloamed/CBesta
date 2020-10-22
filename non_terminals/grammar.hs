@@ -170,9 +170,9 @@ maybeFuncallOrAssignParser :: Parsec [Token] st [Token]
 maybeFuncallOrAssignParser =  (do   assign <- assignToken
                                     expr <- exprParser
                                     return (assign:expr)) <|>
-                              (do   maybeFuncall <- maybeFuncallParser
+                              (do   maybeFuncallOrSplit <- maybeFuncallOrSplitParser
                                     maybeBinop <- maybeBinopParser
-                                    return (maybeFuncall ++ maybeBinop))
+                                    return (maybeFuncallOrSplit ++ maybeBinop))
 
 
 -- <maybe_binop> -> <binop> <expr> | LAMBDA
@@ -194,11 +194,11 @@ exprParser =  (do   term <- termParser
 
 
 -- <term> ->  <id_or_funcall> | <literal> | LEFT_PARENT <expr> RIGHT_PARENT
--- <id_or_funcall> -> ID <maybe_funcall>
+-- <id_or_funcall> -> ID ( <maybe_funcall> | <splkiut> )
 termParser :: Parsec [Token] st [Token]
 termParser =  (do   idd <- idToken
-                    maybeFuncall <- maybeFuncallParser
-                    return (idd:maybeFuncall)) <|>
+                    maybeFuncallOrSplit <- maybeFuncallOrSplitParser
+                    return (idd:maybeFuncallOrSplit)) <|>
               (do   lit <- literalParser
                     return (lit)) <|>
               (do   leftParen <- leftParenToken
@@ -208,23 +208,31 @@ termParser =  (do   idd <- idToken
 
 
 -- <maybe_funcall> -> LEFT_PARENT <func_args> RIGHT_PARENT | LAMBDA
-maybeFuncallParser :: Parsec [Token] st [Token]
-maybeFuncallParser =  (do   leftParen <- leftParenToken
-                            funcArgs <- funcArgsParser
-                            rightParen <- rightParenToken
-                            return (leftParen:funcArgs ++ [rightParen])) <|>
-                      (return [])
+maybeFuncallOrSplitParser :: Parsec [Token] st [Token]
+maybeFuncallOrSplitParser =  (do    leftParen <- leftParenToken
+                                    funcArgs <- funcArgsParser
+                                    rightParen <- rightParenToken
+                                    return (leftParen:funcArgs ++ [rightParen])) <|>
+                              (do   splitString <- splitStringParser
+                                    return (splitString)) <|>
+                              (return [])
 
 
 -- <split_string> -> ( ID | STRING ) LEFT_BRACKET [ ( INT | ID ) ] COLON [ ( INT | ID ) ] RIGHT_BRACKET
 splitStringParser :: Parsec [Token] st [Token]
-splitStringParser = (do       idOrString <- idOrStringParser
-                              leftBracket <- leftBracketToken
-                              maybeIntOrId <- maybeIntOrIdParser
+splitStringParser = (do       leftBracket <- leftBracketToken
+                              maybeIntOrId1 <- maybeIntOrIdParser
                               colon <- colonToken
-                              maybeIntOrId <- maybeIntOrIdParser
+                              maybeIntOrId2 <- maybeIntOrIdParser
                               rightBracket <- rightBracketToken
-                              return (idOrString ++ [leftBracket] ++ maybeIntOrId ++ [colon] ++ maybeIntOrId ++ [rightBracket]))
+                              return (leftBracket:maybeIntOrId1 ++ [colon] ++ maybeIntOrId2 ++ [rightBracket]))
+
+
+-- <maybe_sploit> -> <split_parser> | LAMBDA
+maybeSploitParser :: Parsec [Token] st [Token]
+maybeSploitParser =     (do   splitString <- splitStringParser
+                              return (splitString)) <|>
+                        (return [])
 
 
 -- <maybe_int_or_id> -> INT | ID | LAMBIDA_EM_BERTAO
@@ -342,7 +350,16 @@ declrParser :: Parsec [Token] st [Token]
 declrParser =   (do   typee <- typeToken
                       idd <- idToken
                       maybeInit <- maybeInitParser
-                      return (typee:idd:maybeInit))
+                      ids <- many idsParser
+                      return (typee:idd:maybeInit ++ concat(ids)))
+
+
+-- <maybe_ids> -> COMMA ID 
+idsParser :: Parsec [Token] st [Token]
+idsParser = (do   comma <- commaToken
+                  idd <- idToken
+                  maybeInit <- maybeInitParser
+                  return (comma:idd:maybeInit))
 
 
 -- <maybe_init> -> ASSIGN <expr> | LAMBDA
@@ -362,7 +379,8 @@ literalParser = (do   int <- intToken
                 (do   double <- doubleToken
                       return [double]) <|>
                 (do   string <- stringToken
-                      return [string])
+                      maybeSploit <- maybeSploitParser 
+                      return (string:maybeSploit))
 
 
 -- <func_args> -> <expr> { <funcArgsAuxParser> } | LAMBDA
