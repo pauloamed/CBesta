@@ -1,11 +1,14 @@
-#import <xxx>;
+#import "yyy";
 
-#import <biblioteca>;
+#import "biblioteca";
 
-string msg;
+#import "../data/file.cb";
+#import "..\\data\\file.cb";
+
+String msg;
 
 // funcao para calcular raiz quadrada
-func double calcRaizQuadrada(double x){
+func Double calcRaizQuadrada(Double x){
     if (x == 1.0 || (x < 1.0 && 1 + 1 != 2)) then{
         return 0.0;
     }else{
@@ -13,4 +16,50 @@ func double calcRaizQuadrada(double x){
     }
 }
 
-Int x := 10
+{
+  Int x;
+  {
+    Int y;
+    {
+      if(1 == 1) then{
+        {
+          {
+            // Bool x := "a" + 1;
+          }
+        }
+        Int x;
+        {}
+        {}
+        {}
+        {}
+        {}
+        {{{{{}}}}}
+        {o;} {o;}
+        {l;} {o;}
+        {a;} {o;}
+
+        {u;} {o;}
+        {m;} {o;}
+        {b;} {o;}
+        {e;} {o;}
+        {r;} {o;} {o;}
+        {t;} {o;}
+        {o;}  {o;}
+      } {o;}
+    } {o;}
+  } {o;}
+} {o;}
+
+Int ab, b := 50, y := 40, t := 100, c := 4;
+
+Int g, t;
+
+Int g:=10, t:=10, k, l;
+
+String x, y := "u u u ", l, k;
+
+Bool t,y,z;
+
+Double a:=10, b:=40.5;
+
+String a:="b@t@t@", p := "um+berto=melhor professor s2";
