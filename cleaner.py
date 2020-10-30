@@ -13,5 +13,8 @@ for path in gen(Path(currDir).rglob('*.hi'), Path('.').rglob('*.o')):
     filePath = os.path.join(currDir, path)
     os.remove(filePath)
 
-os.remove("parser.exe")
-os.remove("lexer.hs")
+try:
+    os.remove("parser.exe")
+    os.remove("lexer.hs")
+except:
+    pass
