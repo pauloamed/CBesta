@@ -1,0 +1,90 @@
+% GRAMATICA NOVA E MELHORADA 2.0 UHUL
+% nao vai ter expressao jogada no meio do codigo
+
+================================== MAIN================================== 
+
+<program> -> { <import> } <blocks> // IMPORTS EH OPICIONAL
+
+<blocks> -> { <block> }+
+<block> -> <stmt> SEPARATOR | <enclosed_blocks>
+<enclosed_blocks> -> LEFT_BRACE <blocks> RIGHT_BRACE
+
+<stmt> -> CONTINUE | BREAK | <return> | <void_command> | <compound_stmt> | <declrs> | <deref_pointer> <assignments_op> | <stmt_id>
+<stmt_id> -> ID (<assignments_op> | <funcall_op>)
+
+<types> -> <type> { COMMA <type> }
+<type> -> POINTER LESS_THAN <type> GREATER_THAN
+          | LIST LESS_THAN <type> GREATER_THAN
+          | ARRAY LESS_THAN <type> GREATE_THAN
+          | HASHMAP LESS_THAN <type> COMMA <type> LESS_THAN
+          | TUPLE LESS_THAN <types> GREATER_THAN
+          | <simple_type> 
+          | ID
+<simple_type> -> INT | BOOL | DOUBLE | STRING
+
+<struct> -> STRUCT ID LEFT_BRACE { <declrs> }+ RIGHT_BRACE
+
+<var_binding> -> <assignments> | <declrs>
+
+<declrs> -> <type> ID <assign_expr> { COMMA ID <assign_expr>} 
+<assign_expr> -> ASSIGN <expr>
+
+<assignments> -> <assignment> { COMMA <assignment> }
+<assignments_op> -> <assign_expr> { COMMA <assignment> }
+<assignment> -> ID <assign_expr> | <deref_pointer> <assign_expr>
+<deref_pointer> -> STAR ID
+
+<void_command> -> <free> | <print> | <read>
+<free> -> FREE <expr>
+<print> -> PRINT LEFT_PAREN <expr> RIGHT_PAREN
+<read> -> READ LEFT_PAREN ID RIGHT_PAREN
+
+
+<funcall> -> ID <funcall_op>
+<funcall_op> -> LEFT_PARENT <funcall_args> RIGHT_PARENT 
+<funcall_args> -> <expr> { COMMA <expr> } | LAMBDA
+
+
+======================== COMPOUND STATEMENTS ==================
+
+<compound_stmt> -> <control_structures> | <subprograms> | <struct>
+<control_structures> -> <if> | <while> | <for>
+<subprograms> -> <func> | <proc>
+
+<func> -> FUNC TYPE ID <enclosed_args> <enclosed_blocks>
+<proc> -> PROC TYPE ID <enclosed_args> <enclosed_blocks>
+<enclosed_args> -> LEFT_PAREN <args> RIGHT_PAREN
+<args> -> TYPE ID { COMMA TYPE ID } | LAMBDA
+
+<while> -> WHILE <enclosed_expr> <enclosed_blocks>
+<for> -> FOR LEFT_PAREN [ <var_binding> ] SEMICOLON [ <expr> ] SEMICOLON [ <var_binding> ] RIGHT_PAREN <enclosed_blocks>
+<if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
+
+<return> -> RETURN [ <expr> ]
+
+========================= EXPR ================================
+
+<enclosed_expr> -> LEFT_PAREN <expr> RIGHT_PAREN
+<expr> -> <raw_expr> | <cast> <raw_expr>
+<raw_expr> -> <un_op> <expr> | <enclosed_expr> | <raw_expr_term> 
+<raw_expr_term> -> <term> (<bin_op> <expr> | LAMBDA)
+
+<un_op> -> NEGATION | MINUS
+<bin_op> -> <arit_op> | <bool_op>
+<arit_op> -> MINUS | PLUS | TIMES | EXPO | DIV | MOD
+<bool_op> -> LESSTHAN | GREATERTHAN | LESSEQUALS | GREATEREQUALS | EQUALS | DIFFERENCE
+
+<casting> -> LEFT_BRACKET <type> RIGHT_BRACKET
+
+<term> ->  <deref_pointer> | <literal> | <command_with_ret> | <term_id> | STRING <split_op>
+
+<literal> -> INT_LIT | BOOL_LIT | DOUBLE_LIT | STRING_LIT
+
+<ret_command> -> <alloc> | <addr> | <len> | <size_of>
+<alloc> -> ALLOC <enclosed_expr>
+<addr> -> ADDR LEFT_PAREN ID RIGHT_PAREN
+<len> -> LEN LEFT_PAREN ID RIGHT_PAREN
+<size_of> -> SIZEOF LEFT_PAREN <type> RIGHT_PAREN
+
+<term_id> -> ID (<funcall_op> | <split_op>)
+<split_op> -> LEFT_BRACKET [ <expr> ] COLON [ <expr> ] RIGHT_BRACKET

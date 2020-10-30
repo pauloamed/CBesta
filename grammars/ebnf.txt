@@ -1,0 +1,75 @@
+% GRAMATICA NOVA E MELHORADA 2.0 UHUL
+% nao vai ter expressao jogada no meio do codigo
+
+================================== MAIN================================== 
+
+<program> -> { <import> } <blocks> // IMPORTS EH OPICIONAL
+
+<blocks> -> { <block> }+
+<block> -> <stmt> SEPARATOR | <enclosed_blocks>
+<enclosed_blocks> -> LEFT_BRACE <blocks> RIGHT_BRACE
+
+<stmt> -> CONTINUE | BREAK | <return> | <var_binding> | <funcall> | <void_command> | <compound_stmt>
+
+<types> -> <type> { COMMA <type> }
+<type> -> POINTER LESS_THAN <type> GREATER_THAN
+          | LIST LESS_THAN <type> GREATER_THAN
+          | ARRAY LESS_THAN <type> GREATE_THAN
+          | HASHMAP LESS_THAN <type> COMMA <type> LESS_THAN
+          | TUPLE LESS_THAN <types> GREATER_THAN
+          | <simple_type> 
+          | ID
+<simple_type> -> INT | BOOL | DOUBLE | STRING
+
+<struct> -> STRUCT ID LEFT_BRACE { ( <declr> | <init> ) }+ RIGHT_BRACE
+
+<var_binding> -> <assignment> | <declr>
+<declr> -> <type> ID { COMMA ID }+ [ASSIGN <expr>]
+<assignments> -> <assignment> { COMMA <assignment> }
+<assignment> -> ( ID | <deref_pointer> ) ASSIGN <expr>
+<deref_pointer> -> STAR ID
+
+<void_command> -> <free> | <print> | <read>
+
+<funcall> -> ID LEFT_PARENT <funcall_args> RIGHT_PARENT 
+<funcall_args> -> <expr> { COMMA <expr> } | LAMBDA
+
+
+======================== COMPOUND STATEMENTS ==================
+
+<compound_stmt> -> <control_structures> | <subprograms> | <struct>
+<control_structures> -> <if> | <while> | <for>
+<subprograms> -> <func> | <proc>
+
+<func> -> FUNC TYPE ID <enclosed_args> <enclosed_blocks>
+<proc> -> PROC TYPE ID <enclosed_args> <enclosed_blocks>
+<enclosed_args> -> LEFT_PAREN <args> RIGHT_PAREN
+<args> -> TYPE ID { COMMA TYPE ID } | LAMBDA
+
+<while> -> WHILE <enclosed_expr> <enclosed_blocks>
+<for> -> FOR LEFT_PAREN [ <var_binding> ] SEMICOLON [ <expr> ] SEMICOLON [ <var_binding> ] RIGHT_PAREN <enclosed_blocks>
+<if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
+<return> -> RETURN [ <expr> ]
+
+========================= EXPR ================================
+
+<enclosed_expr> -> LEFT_PAREN <expr> RIGHT_PAREN
+<expr> -> [ <cast> ] <raw_expr>
+<raw_expr> -> <term> | <term> <bin_op> <expr> | <un_op> <expr> | <enclosed_expr>
+<literal> -> INT | BOOL | DOUBLE | STRING
+<un_op> -> NEGATION | MINUS
+<bin_op> -> <arit_op> | <bool_op>
+<arit_op> -> MINUS | PLUS | TIMES | EXPO | DIV | MOD
+<bool_op> -> LESSTHAN | GREATERTHAN | LESSEQUALS | GREATEREQUALS | EQUALS | DIFFERENCE
+
+<casting> -> LEFT_PAREN <type> RIGHT_PAREN
+
+<term> -> ID | <literal> | <funcall> | <ret_command> | <split_string> | <deref_pointer>
+
+<split_string> -> ( ID | STRING ) LEFT_BRACKET [ INT ] COLON [ INT ] RIGHT_BRACKET
+
+<ret_command> -> <alloc> | <addr> | <len> | <size_of>
+<alloc> -> ALLOC <enclosed_expr>
+<addr> -> ADDR LEFT_PAREN ID RIGHT_PAREN
+<len> -> LEN LEFT_PAREN ID RIGHT_PAREN
+<size_of> -> SIZEOF LEFT_PAREN <type> RIGHT_PAREN
