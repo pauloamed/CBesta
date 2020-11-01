@@ -12,15 +12,6 @@
 <stmt> -> CONTINUE | BREAK | <return> | <void_command> | <compound_stmt> | <declrs> | <deref_pointer> <assignments_op> | <stmt_id>
 <stmt_id> -> ID (<assignments_op> | <funcall_op>)
 
-<types> -> <type> { COMMA <type> }
-<type> -> POINTER LESS_THAN <type> GREATER_THAN
-          | LIST LESS_THAN <type> GREATER_THAN
-          | ARRAY LESS_THAN <type> GREATE_THAN
-          | HASHMAP LESS_THAN <type> COMMA <type> LESS_THAN
-          | TUPLE LESS_THAN <types> GREATER_THAN
-          | <simple_type>
-          | ID
-<simple_type> -> INT | BOOL | DOUBLE | STRING
 
 <struct> -> STRUCT ID LEFT_BRACE { <declrs> }+ RIGHT_BRACE
 
@@ -32,7 +23,7 @@
 <assignments> -> <assignment> { COMMA <assignment> }
 <assignments_op> -> <assign_expr> { COMMA <assignment> }
 <assignment> -> ID <assign_expr> | <deref_pointer> <assign_expr>
-<deref_pointer> -> STAR ID
+
 
 <void_command> -> <free> | <print> | <read>
 <free> -> FREE <expr>
@@ -40,9 +31,18 @@
 <read> -> READ LEFT_PAREN ID RIGHT_PAREN
 
 
-<funcall> -> ID <funcall_op>
-<funcall_op> -> LEFT_PARENT <funcall_args> RIGHT_PARENT
-<funcall_args> -> <expr> { COMMA <expr> } | LAMBDA
+======================== TYPES ================================
+
+<types> -> <type> { COMMA <type> }
+<type> -> POINTER <enclosed_type>
+          | LIST <enclosed_type>
+          | ARRAY <enclosed_type>
+          | HASHMAP LESS_THAN <type> COMMA <type> GREATER_THAN
+          | TUPLE LESS_THAN <types> GREATER_THAN
+          | <simple_type>
+          | ID
+<enclosed_type> -> LESS_THAN <type> GREATE_THAN
+<simple_type> -> INT | BOOL | DOUBLE | STRING
 
 
 ======================== COMPOUND STATEMENTS ==================
@@ -88,3 +88,9 @@
 
 <term_id> -> ID (<funcall_op> | <split_op>)
 <split_op> -> LEFT_BRACKET [ <expr> ] COLON [ <expr> ] RIGHT_BRACKET
+
+<funcall> -> ID <funcall_op>
+<funcall_op> -> LEFT_PARENT <funcall_args> RIGHT_PARENT
+<funcall_args> -> <expr> { COMMA <expr> } | LAMBDA
+
+<deref_pointer> -> STAR ID
