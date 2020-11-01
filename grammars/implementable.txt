@@ -1,7 +1,7 @@
 % GRAMATICA NOVA E MELHORADA 2.0 UHUL
 % nao vai ter expressao jogada no meio do codigo
 
-================================== MAIN================================== 
+================================== MAIN==================================
 
 <program> -> { <import> } <blocks> // IMPORTS EH OPICIONAL
 
@@ -18,7 +18,7 @@
           | ARRAY LESS_THAN <type> GREATE_THAN
           | HASHMAP LESS_THAN <type> COMMA <type> LESS_THAN
           | TUPLE LESS_THAN <types> GREATER_THAN
-          | <simple_type> 
+          | <simple_type>
           | ID
 <simple_type> -> INT | BOOL | DOUBLE | STRING
 
@@ -26,7 +26,7 @@
 
 <var_binding> -> <assignments> | <declrs>
 
-<declrs> -> <type> ID <assign_expr> { COMMA ID <assign_expr>} 
+<declrs> -> <type> ID <assign_expr> { COMMA ID <assign_expr>}
 <assign_expr> -> ASSIGN <expr>
 
 <assignments> -> <assignment> { COMMA <assignment> }
@@ -41,7 +41,7 @@
 
 
 <funcall> -> ID <funcall_op>
-<funcall_op> -> LEFT_PARENT <funcall_args> RIGHT_PARENT 
+<funcall_op> -> LEFT_PARENT <funcall_args> RIGHT_PARENT
 <funcall_args> -> <expr> { COMMA <expr> } | LAMBDA
 
 
@@ -66,12 +66,12 @@
 
 <enclosed_expr> -> LEFT_PAREN <expr> RIGHT_PAREN
 <expr> -> <raw_expr> | <cast> <raw_expr>
-<raw_expr> -> <un_op> <expr> | <enclosed_expr> | <raw_expr_term> 
+<raw_expr> -> <un_op> <expr> | <enclosed_expr> | <raw_expr_term>
 <raw_expr_term> -> <term> (<bin_op> <expr> | LAMBDA)
 
 <un_op> -> NEGATION | MINUS
 <bin_op> -> <arit_op> | <bool_op>
-<arit_op> -> MINUS | PLUS | TIMES | EXPO | DIV | MOD
+<arit_op> -> MINUS | PLUS | STAR | EXPO | DIV | MOD
 <bool_op> -> LESSTHAN | GREATERTHAN | LESSEQUALS | GREATEREQUALS | EQUALS | DIFFERENCE
 
 <casting> -> LEFT_BRACKET <type> RIGHT_BRACKET
