@@ -8,6 +8,7 @@ import LiteralsPrimTokens
 import MainPrimTokens
 import OperatorsPrimTokens
 import ScopesPrimTokens
+import TypesPrimTokens
 
 
 -- <type> -> POINTER <enclosed_type>
@@ -20,10 +21,10 @@ import ScopesPrimTokens
 typeParser :: Parsec [Token] st [Token]
 typeParser = (do  x <- pointerToken <|> listToken <|> arrayToken
                   enclosedType <- enclosedTypeParser
-                  return x:enclosedType) <|>
+                  return (x:enclosedType)) <|>
              (do  idd <- idToken
                   return ([idd])) <|>
-             (do  simpleType <- simpleTypeToken
+             (do  simpleType <- simpleTypeParser
                   return simpleType) <|>
              (do  hashmap <- hashmapToken
                   lessThan <- lessThanToken
@@ -31,7 +32,7 @@ typeParser = (do  x <- pointerToken <|> listToken <|> arrayToken
                   comma <- commaToken
                   typee2 <- typeParser
                   greaterThan <- greaterThanToken
-                  return (hashmap:lessThan:typee1 ++ comma:typee2 ++ greaterThan)) <|>
+                  return (hashmap:lessThan:typee1 ++ comma:typee2 ++ [greaterThan])) <|>
              (do  tuple <- tupleToken
                   lessThan <- lessThanToken
                   types <- typesParser
@@ -44,7 +45,7 @@ enclosedTypeParser :: Parsec [Token] st [Token]
 enclosedTypeParser = (do  lessThan <- lessThanToken
                           typee <- typeParser
                           greaterThan <- greaterThanToken
-                          return lessThan:typee ++ [greaterThan])
+                          return (lessThan:typee ++ [greaterThan]))
 
 
 -- <types> -> <type> { COMMA <type> }
@@ -52,11 +53,11 @@ typesParser :: Parsec [Token] st [Token]
 typesParser = (do   typee <- typeParser
                     remeaning <- many (do   comma <- commaToken
                                             typee <- typeParser
-                                            return comma:typee)
+                                            return (comma:typee))
                     return (typee ++ concat(remeaning)))
 
 
 -- <simple_type> -> INT | BOOL | DOUBLE | STRING
 simpleTypeParser :: Parsec [Token] st [Token]
 simpleTypeParser = (do  x <- intToken <|> boolToken <|> doubleToken <|> stringToken
-                        return x)
+                        return [x])
