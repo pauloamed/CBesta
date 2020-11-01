@@ -9,12 +9,12 @@ String msg;
 
 // funcao para calcular raiz quadrada
 func Double calcRaizQuadrada(Double x){
-    if (x == 1.0 || (x < 1.0 && 1 + 1 != 2)) then{
-        return 0.0;
-    }else{
-        return x ^ (0.5);
-    }
-}
+    //if (x == 1.0 || (x < 1.0 && 1 + 1 != 2)) then{
+    //    return 0.0;
+    //}else{
+    //    return x ^ (0.5);
+    //}
+};
 
 {
   Int x;
@@ -34,23 +34,23 @@ func Double calcRaizQuadrada(Double x){
         {}
         {}
         {{{{{}}}}}
-        {o;} {o;}
-        {l;} {o;}
-        {a;} {o;}
+        {o();} {o();}
+        {l();} {o();}
+        {a();} {o();}
 
-        {u;} {o;}
-        {m;} {o;}
-        {b;} {o;}
-        {e;} {o;}
-        {r;} {o;} {o;}
-        {t;} {o;}
-        {o;}  {o;}
-      } {o;}
-    } {o;}
-  } {o;}
-} {o;}
+        {u();} {o();}
+        {m();} {o();}
+        {b();} {o();}
+        {e();} {o();}
+        {r();} {o();} {o();}
+        {t();} {o();}
+        {o();}  {o();}
+      }; {o();}
+    } {o();}
+  } {o();}
+} {o();}
 
-Int ab, b := 50, y := 40, t := 100, c := 4;
+Int ab :=10, b := 50, y := 40, t := 100, c := 4;
 
 Int g, t;
 
