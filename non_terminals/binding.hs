@@ -10,6 +10,9 @@ import OperatorsPrimTokens
 import ScopesPrimTokens
 
 
+import TypeGrammar
+import ExprGrammar
+
 -- <var_binding> -> <assignments> | <declrs>
 varBindingParser :: Parsec [Token] st [Token]
 varBindingParser = (do  x <- assignmentsParser <|> declrsParser

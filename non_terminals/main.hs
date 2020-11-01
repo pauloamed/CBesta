@@ -9,6 +9,9 @@ import MainPrimTokens
 import OperatorsPrimTokens
 import ScopesPrimTokens
 
+import TypeGrammar
+import ExprGrammar
+import BindingGrammar
 
 -- <program> -> { <import> } <blocks> // IMPORTS EH OPICIONAL
 programParser :: Parsec [Token] st [Token]

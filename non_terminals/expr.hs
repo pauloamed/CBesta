@@ -10,7 +10,7 @@ import OperatorsPrimTokens
 import ScopesPrimTokens
 
 
--- import typeGrammar
+import TypeGrammar
 
 
 -- <enclosed_expr> -> LEFT_PAREN <expr> RIGHT_PAREN
