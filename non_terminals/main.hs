@@ -30,9 +30,9 @@ importParser = (do  hashtag <- hashtagToken
                     return (hashtag:importt:[fileName]))
 
 --
--- <blocks> -> { <block> }+
+-- <blocks> -> { <block> }
 blocksParser :: Parsec [Token] st [Token]
-blocksParser = (do  blocks <- many1 blockParser
+blocksParser = (do  blocks <- many blockParser
                     return (concat(blocks)))
 
 

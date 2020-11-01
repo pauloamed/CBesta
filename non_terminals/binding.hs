@@ -21,17 +21,21 @@ varBindingParser = (do  x <- assignmentsParser <|> declrsParser
                         return x)
 
 
--- <declrs> -> <type> ID [ <assign_expr> { COMMA ID <assign_expr>}]
+-- <maybe_assigned_id> -> ID [<assign_expr>]
+maybeAssignedIdParser :: Parsec [Token] st [Token]
+maybeAssignedIdParser = (do   idd <- idToken
+                              maybeAssignExpr <- assignExprParser <|> (return [])
+                              return (idd:maybeAssignExpr))
+
+
+-- <declrs> -> <type> <maybe_assigned_id>  { COMMA <maybe_assigned_id>}]
 declrsParser :: Parsec [Token] st [Token]
 declrsParser = (do  typee <- typeParser
-                    idd <- idToken
-                    maybeAssigns <- (do   assignExpr <- assignExprParser
-                                          remeaning <- many (do   comma <- commaToken
-                                                                  idd <- idToken
-                                                                  assignExpr <- assignExprParser
-                                                                  return (comma:idd:assignExpr))
-                                          return (assignExpr ++ concat(remeaning))) <|> (return [])
-                    return (typee ++ idd:maybeAssigns))
+                    assignedId <- maybeAssignedIdParser
+                    maybeAssigns <- many (do  comma <- commaToken
+                                              maybeAssignedIds <- maybeAssignedIdParser
+                                              return (comma:maybeAssignedIds))
+                    return (typee ++ assignedId ++ concat(maybeAssigns)))
 
 
 -- <assign_expr> -> ASSIGN <expr>

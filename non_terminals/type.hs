@@ -22,8 +22,6 @@ typeParser :: Parsec [Token] st [Token]
 typeParser = (do  x <- pointerToken <|> listToken <|> arrayToken
                   enclosedType <- enclosedTypeParser
                   return (x:enclosedType)) <|>
-             (do  idd <- idToken
-                  return ([idd])) <|>
              (do  simpleType <- simpleTypeParser
                   return simpleType) <|>
              (do  hashmap <- hashmapToken
@@ -38,6 +36,8 @@ typeParser = (do  x <- pointerToken <|> listToken <|> arrayToken
                   types <- typesParser
                   greaterThan <- greaterThanToken
                   return (tuple:lessThan:types ++ [greaterThan]))
+                  -- (do  idd <- idToken
+                  --      return ([idd])) <|>
 
 
 -- <enclosed_type> -> LESS_THAN <type> GREATE_THAN

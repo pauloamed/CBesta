@@ -23,13 +23,11 @@ enclosedExprParser = (do  leftParen <- leftParenToken
                           return (leftParen:expr ++ [rightParen]))
 
 
--- <expr> -> <raw_expr> | <cast> <raw_expr>
+-- <expr> -> [<cast>] <raw_expr>
 exprParser :: Parsec [Token] st [Token]
-exprParser = (do  rawExpr <- rawExprParser
-                  return rawExpr) <|>
-             (do  cast <- castingParser
+exprParser = (do  maybeCast <- castingParser <|> (return [])
                   rawExpr <- rawExprParser
-                  return (cast ++ rawExpr))
+                  return (maybeCast ++ rawExpr))
 
 
 -- <raw_expr> -> <un_op> <expr> | <enclosed_expr> | <raw_expr_term>
@@ -48,8 +46,7 @@ rawExprTermParser :: Parsec [Token] st [Token]
 rawExprTermParser = (do   term <- termParser
                           binopOrLambda <- (do  binop <- binopParser
                                                 expr <- exprParser
-                                                return (binop ++ expr)) <|>
-                                           (return [])
+                                                return (binop ++ expr)) <|> (return [])
                           return (term ++ binopOrLambda))
 
 
@@ -86,7 +83,7 @@ castingParser = (do   leftBracket <- leftBracketToken
 
 -- <term> ->  <deref_pointer> | <literal> | <command_with_ret> | <term_id> | STRING <split_op>
 termParser :: Parsec [Token] st [Token]
-termParser = (do  derefPointer <- derefPointerParser -- tem que importar da main
+termParser = (do  derefPointer <- derefPointerParser
                   return derefPointer) <|>
              (do  literal <- literalParser
                   return literal) <|>
@@ -144,10 +141,10 @@ sizeOfParser = (  do  sizeOf <- sizeOfToken
                       return (sizeOf:leftParen:typee ++ [rightParen]))
 
 
--- <term_id> -> ID (<funcall_op> | <split_op>)
+-- <term_id> -> ID [(<funcall_op> | <split_op>)]
 termIdParser :: Parsec [Token] st [Token]
 termIdParser =  (do idd <- idToken
-                    funcallOpOrSplitOp <- funcallOpParser <|> splitOpParser
+                    funcallOpOrSplitOp <- funcallOpParser <|> splitOpParser <|> (return [])
                     return (idd:funcallOpOrSplitOp))
 
 
