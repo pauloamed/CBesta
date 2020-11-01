@@ -155,8 +155,7 @@ termIdParser =  (do idd <- idToken
 -- <split_op> -> LEFT_BRACKET [ <expr> ] COLON [ <expr> ] RIGHT_BRACKET
 splitOpParser :: Parsec [Token] st [Token]
 splitOpParser =   (do   leftBracket <- leftBracketToken
-                        maybeExpr1 <- ( do   expr <- exprParser
-                                        return expr) <|> (return [])
+                        maybeExpr1 <- exprParser <|> (return [])
                         colon <- colonToken
                         maybeExpr1 <- ( do   expr <- exprParser
                                         return expr) <|> (return [])
