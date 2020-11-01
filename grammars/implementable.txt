@@ -15,6 +15,29 @@
 
 <struct> -> STRUCT ID LEFT_BRACE { <declrs> }+ RIGHT_BRACE
 
+
+======================== COMPOUND STATEMENTS ==================
+
+<compound_stmt> -> <control_structures> | <subprograms> | <struct>
+<control_structures> -> <if> | <while> | <for>
+<subprograms> -> <func> | <proc>
+
+<func> -> FUNC <type> ID <enclosed_args> <enclosed_blocks>
+<proc> -> PROC ID <enclosed_args> <enclosed_blocks>
+<enclosed_args> -> LEFT_PAREN <args> RIGHT_PAREN
+<args> -> TYPE ID { COMMA TYPE ID } | LAMBDA
+
+<while> -> WHILE <enclosed_expr> <enclosed_blocks>
+<for> -> FOR LEFT_PAREN [ <var_binding> ] SEMICOLON [ <expr> ] SEMICOLON [ <var_binding> ] RIGHT_PAREN <enclosed_blocks>
+<if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
+
+<return> -> RETURN [ <expr> ]
+
+========================COMMAND & BINDINGS =================
+DEPENDE DE EXPR
+DEPENDE DE TYPE
+=========
+
 <var_binding> -> <assignments> | <declrs>
 
 <declrs> -> <type> ID <assign_expr> { COMMA ID <assign_expr>}
@@ -31,39 +54,9 @@
 <read> -> READ LEFT_PAREN ID RIGHT_PAREN
 
 
-======================== TYPES ================================
-
-<types> -> <type> { COMMA <type> }
-<type> -> POINTER <enclosed_type>
-          | LIST <enclosed_type>
-          | ARRAY <enclosed_type>
-          | HASHMAP LESS_THAN <type> COMMA <type> GREATER_THAN
-          | TUPLE LESS_THAN <types> GREATER_THAN
-          | <simple_type>
-          | ID
-<enclosed_type> -> LESS_THAN <type> GREATE_THAN
-<simple_type> -> INT | BOOL | DOUBLE | STRING
-
-
-======================== COMPOUND STATEMENTS ==================
-
-<compound_stmt> -> <control_structures> | <subprograms> | <struct>
-<control_structures> -> <if> | <while> | <for>
-<subprograms> -> <func> | <proc>
-
-<func> -> FUNC TYPE ID <enclosed_args> <enclosed_blocks>
-<proc> -> PROC TYPE ID <enclosed_args> <enclosed_blocks>
-<enclosed_args> -> LEFT_PAREN <args> RIGHT_PAREN
-<args> -> TYPE ID { COMMA TYPE ID } | LAMBDA
-
-<while> -> WHILE <enclosed_expr> <enclosed_blocks>
-<for> -> FOR LEFT_PAREN [ <var_binding> ] SEMICOLON [ <expr> ] SEMICOLON [ <var_binding> ] RIGHT_PAREN <enclosed_blocks>
-<if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
-
-<return> -> RETURN [ <expr> ]
-
 ========================= EXPR ================================
-
+DEPENDE DE TYPE
+======
 <enclosed_expr> -> LEFT_PAREN <expr> RIGHT_PAREN
 <expr> -> <raw_expr> | <cast> <raw_expr>
 <raw_expr> -> <un_op> <expr> | <enclosed_expr> | <raw_expr_term>
@@ -94,3 +87,18 @@
 <funcall_args> -> <expr> { COMMA <expr> } | LAMBDA
 
 <deref_pointer> -> STAR ID
+
+======================== TYPES ================================
+NAO TEM DEPENDENCIAS
+=======
+
+<types> -> <type> { COMMA <type> }
+<type> -> POINTER <enclosed_type>
+          | LIST <enclosed_type>
+          | ARRAY <enclosed_type>
+          | HASHMAP LESS_THAN <type> COMMA <type> GREATER_THAN
+          | TUPLE LESS_THAN <types> GREATER_THAN
+          | <simple_type>
+          | ID
+<enclosed_type> -> LESS_THAN <type> GREATE_THAN
+<simple_type> -> INT | BOOL | DOUBLE | STRING
