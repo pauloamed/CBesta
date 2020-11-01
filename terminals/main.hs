@@ -6,12 +6,6 @@ import Text.Parsec
 import TerminalUtils
 
 
-typeToken :: Parsec [Token] st Token
-typeToken = tokenPrim show update_pos get_token where
-  get_token (Type p x) = Just (Type p x)
-  get_token _  = Nothing
-
-
 idToken :: Parsec [Token] st Token
 idToken = tokenPrim show update_pos get_token where
   get_token (Id p x) = Just (Id p x)
@@ -28,12 +22,6 @@ importToken :: Parsec [Token] st Token
 importToken = tokenPrim show update_pos get_token where
   get_token (Import p)  = Just (Import p)
   get_token _  = Nothing
-
-
--- mainToken :: Parsec [Token] st Token
--- mainToken = tokenPrim show update_pos get_token where
---   get_token (Main p)  = Just (Main p)
---   get_token _  = Nothing
 
 
 funcToken :: Parsec [Token] st Token
@@ -75,4 +63,10 @@ commaToken = tokenPrim show update_pos get_token where
 dotToken :: Parsec [Token] st Token
 dotToken = tokenPrim show update_pos get_token where
   get_token (Dot p)  = Just (Dot p)
+  get_token _  = Nothing
+
+
+structToken :: Parsec [Token] st Token
+structToken = tokenPrim show update_pos get_token where
+  get_token (Struct p)  = Just (Struct p)
   get_token _  = Nothing

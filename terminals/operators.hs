@@ -36,9 +36,9 @@ minusToken = tokenPrim show update_pos get_token where
   get_token _  = Nothing
 
 
-timesToken :: Parsec [Token] st Token
-timesToken = tokenPrim show update_pos get_token where
-  get_token (Times p)  = Just (Times p)
+starToken :: Parsec [Token] st Token
+starToken = tokenPrim show update_pos get_token where
+  get_token (Star p)  = Just (Star p)
   get_token _  = Nothing
 
 
@@ -81,42 +81,6 @@ equalsToken = tokenPrim show update_pos get_token where
 differenceToken :: Parsec [Token] st Token
 differenceToken = tokenPrim show update_pos get_token where
   get_token (Difference p)  = Just (Difference p)
-  get_token _  = Nothing
-
-
-lessThan_Token :: Parsec [Token] st Token
-lessThan_Token = tokenPrim show update_pos get_token where
-  get_token (LessThan_ p)  = Just (LessThan_ p)
-  get_token _  = Nothing
-
-
-greaterThan_Token :: Parsec [Token] st Token
-greaterThan_Token = tokenPrim show update_pos get_token where
-  get_token (GreaterThan_ p)  = Just (GreaterThan_ p)
-  get_token _  = Nothing
-
-
-lessEquals_Token :: Parsec [Token] st Token
-lessEquals_Token = tokenPrim show update_pos get_token where
-  get_token (LessEquals_ p)  = Just (LessEquals_ p)
-  get_token _  = Nothing
-
-
-greaterEquals_Token :: Parsec [Token] st Token
-greaterEquals_Token = tokenPrim show update_pos get_token where
-  get_token (GreaterEquals_ p)  = Just (GreaterEquals_ p)
-  get_token _  = Nothing
-
-
-equals_Token :: Parsec [Token] st Token
-equals_Token = tokenPrim show update_pos get_token where
-  get_token (Equals_ p)  = Just (Equals_ p)
-  get_token _  = Nothing
-
-
-difference_Token :: Parsec [Token] st Token
-difference_Token = tokenPrim show update_pos get_token where
-  get_token (Difference_ p)  = Just (Difference_ p)
   get_token _  = Nothing
 
 
