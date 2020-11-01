@@ -4,7 +4,7 @@
 ================================== MAIN==================================
 
 <program> -> { <import> } <blocks> // IMPORTS EH OPICIONAL
-
+-- <import> -> HASHTAG IMPORT NAME
 <blocks> -> { <block> }+
 <block> -> <stmt> SEPARATOR | <enclosed_blocks>
 <enclosed_blocks> -> LEFT_BRACE <blocks> RIGHT_BRACE
@@ -15,8 +15,6 @@
 
 <struct> -> STRUCT ID LEFT_BRACE { <declrs> }+ RIGHT_BRACE
 
-
-======================== COMPOUND STATEMENTS ==================
 
 <compound_stmt> -> <control_structures> | <subprograms> | <struct>
 <control_structures> -> <if> | <while> | <for>
