@@ -9,6 +9,10 @@ import MainPrimTokens
 import OperatorsPrimTokens
 import ScopesPrimTokens
 
+
+-- import typeGrammar
+
+
 -- <enclosed_expr> -> LEFT_PAREN <expr> RIGHT_PAREN
 enclosedExprParser :: Parsec [Token] st [Token]
 enclosedExprParser = (do  leftParen <- leftParenToken
@@ -49,53 +53,24 @@ rawExprTermParser = (do   term <- termParser
 
 -- <un_op> -> NEGATION | MINUS
 unopParser :: Parsec [Token] st [Token]
-unopParser =  (do   neg <- negationToken
-                    return ([neg])) <|>
-              (do   minus <- minusToken
-                    return ([minus]))
+unopParser =  (do   x <- negationToken <|> minusToken
+                    return ([x]))
 
 
 -- <bin_op> -> <arit_op> | <bool_op>
 binopParser :: Parsec [Token] st [Token]
-binopParser = (do   aritOp <- aritOpParser
-                    return (aritOp)) <|>
-              (do   boolOp <- boolOpParser
-                    return (boolOp))
+binopParser = (do   x <- aritOpParser <|> boolOpParser
+                    return (x))
 
 
 -- <arit_op> -> MINUS | PLUS | STAR | EXPO | DIV | MOD
 aritOpParser :: Parsec [Token] st [Token]
-aritOpParser =  (do   x <- minusToken
-                      return ([x])) <|>
-                (do   x <- plusToken
-                      return ([x])) <|>
-                (do   x <- starToken
-                      return ([x])) <|>
-                (do   x <- expoToken
-                      return ([x])) <|>
-                (do   x <- divToken
-                      return ([x])) <|>
-                (do   x <- modToken
+aritOpParser =  (do   x <- minusToken <|> plusToken <|> starToken <|> expoToken <|> divToken <|> modToken
                       return ([x]))
-
 
 -- <bool_op> -> LESSTHAN | GREATERTHAN | LESSEQUALS | GREATEREQUALS | EQUALS | DIFFERENCE
 boolOpParser :: Parsec [Token] st [Token]
-boolOpParser =  (do   x <- lessThanToken
-                      return ([x])) <|>
-                (do   x <- greaterThanToken
-                      return ([x])) <|>
-                (do   x <- lessEqualsToken
-                      return ([x])) <|>
-                (do   x <- greaterEqualsToken
-                      return ([x])) <|>
-                (do   x <- equalsToken
-                      return ([x])) <|>
-                (do   x <- differenceToken
-                      return ([x])) <|>
-                (do   x <- andToken
-                      return ([x])) <|>
-                (do   x <- orToken
+boolOpParser =  (do   x <- lessThanToken <|> greaterThanToken <|> lessEqualsToken <|> greaterEqualsToken <|> equalsToken <|> differenceToken <|> andToken <|> orToken
                       return ([x]))
 
 
@@ -124,27 +99,14 @@ termParser = (do  derefPointer <- derefPointerParser -- tem que importar da main
 
 -- <literal> -> INT_LIT | BOOL_LIT | DOUBLE_LIT | STRING_LIT
 literalParser :: Parsec [Token] st [Token]
-literalParser = (do   int <- intLitToken
-                      return [int]) <|>
-                (do   bool <- boolLitToken
-                      return [bool]) <|>
-                (do   double <- doubleLitToken
-                      return [double]) <|>
-                (do   string <- stringLitToken
-                      return [string])
+literalParser = (do   x <- intLitToken <|> boolLitToken <|> doubleLitToken <|> stringLitToken
+                      return [x])
 
 
 -- <command_with_ret> -> <alloc> | <addr> | <len> | <size_of>
 commandWithRetParser :: Parsec [Token] st [Token]
-commandWithRetParser = (do  x <- allocParser
-                            return x) <|>
-                       (do  x <- addrParser
-                            return x) <|>
-                       (do  x <- lenParser
-                            return x) <|>
-                       (do  x <- sizeOfParser
+commandWithRetParser = (do  x <- allocParser <|> addrParser <|> lenParser <|> sizeOfParser
                             return x)
-
 
 -- <alloc> -> ALLOC <enclosed_expr>
 allocParser :: Parsec [Token] st [Token]
@@ -200,3 +162,34 @@ splitOpParser =   (do   leftBracket <- leftBracketToken
                                         return expr) <|> (return [])
                         rightBracket <- rightBracketToken
                         return (leftBracket:maybeExpr1 ++ [colon] ++ maybeExpr1 ++ [rightBracket]))
+
+
+-- <deref_pointer> -> STAR ID
+derefPointerParser :: Parsec [Token] st [Token]
+derefPointerParser = (do  star <- starToken
+                          idd <- idToken
+                          return start:[idd])
+
+
+-- <funcall> -> ID <funcall_op>
+funcallParser :: Parsec [Token] st [Token]
+funcallParser = (do   idd <- idToken
+                      funcallOp <- funcallOpParser
+                      return idd:funcallOp)
+
+
+-- <funcall_op> -> LEFT_PARENT <funcall_args> RIGHT_PARENT
+funcallOp :: Parsec [Token] st [Token]
+funcallOp = (do   leftParen <- leftParenToken
+                  funcallArgs <- funcallArgsParser
+                  rightParen <- rightParenToken
+                  return leftParen:funcallArgs ++ [rightParen])
+
+
+-- <funcall_args> -> <expr> { COMMA <expr> } | LAMBDA
+funcallArgsParser :: Parsec [Token] st [Token]
+funcallArgsParser = (do   expr <- exprParser
+                          remeaning <- many (do   comma <- commaToken
+                                                  expr <- exprParser
+                                                  return (comma:expr))
+                          return expr++concat(remeaning)) <|> (return [])
