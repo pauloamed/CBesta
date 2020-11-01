@@ -23,6 +23,27 @@ tokens :-
     continue                                { \p s -> Continue p }
     break                                   { \p s -> Break p }
 
+----------------------- COMMANDS  --------------------------
+    free                                    { \p s -> Free p }
+    print                                   { \p s -> Print p }
+    read                                    { \p s -> Read p }
+    alloc                                   { \p s -> Alloc p }
+    addr                                    { \p s -> Addr p }
+    len                                     { \p s -> Len p }
+    sizeof                                  { \p s -> SizeOf p }
+
+---------------------- TYPES  -------------------------
+
+    Int                                     { \p s -> Int p }
+    Double                                  { \p s -> Double p }
+    Bool                                    { \p s -> Bool p }
+    String                                  { \p s -> String p }
+    Pointer                                 { \p s -> Pointer p }
+    List                                    { \p s -> List p }
+    Array                                   { \p s -> Array p }
+    Hashmap                                 { \p s -> Hashmap p }
+    Tuple                                   { \p s -> Tuple p }
+
 ---------------------- SCOPES  -------------------------
 
     \(                                      { \p s -> LeftParen p }
@@ -39,7 +60,7 @@ tokens :-
     \^                                      { \p s -> Expo p }
     \+                                      { \p s -> Plus p }
     \-                                      { \p s -> Minus p }
-    \*                                      { \p s -> Times p }
+    \*                                      { \p s -> Star p }
     "/"                                     { \p s -> Div p }
     "<"                                     { \p s -> LessThan p }
     >                                       { \p s -> GreaterThan p }
@@ -59,18 +80,17 @@ tokens :-
 
 -------------------- LITERALS --------------------------
 
-    \-?$digit+\.$digit+                     { \p s -> Double p (read s) }
-    \-?$digit+                              { \p s -> Int p (read s) }
-    "true"                                  { \p s -> Bool p (read s) }
-    "false"                                 { \p s -> Bool p (read s) }
-    \"[^\"]*\"                              { \p s -> String p s }
+    \-?$digit+\.$digit+                     { \p s -> DoubleLit p (read s) }
+    \-?$digit+                              { \p s -> IntLit p (read s) }
+    ("true" | "false")                      { \p s -> BoolLit p (read s) }
+    \"[^\"]*\"                              { \p s -> StringLit p s }
 
 -------------------------- MAIN ------------------------------------
     $white+                                 ;
     "//".*                                  ; -- ignora comentários
-    ("Int" | "Double" | "Bool" | "String")  { \p s -> Type p s }
     return                                  { \p s -> Return p }
     import                                  { \p s -> Import p }
+    struct                                  { \p s -> Struct p }
     func                                    { \p s -> Func p }
     proc                                    { \p s -> Proc p }
     $alpha [$alpha $digit \_]*              { \p s -> Id p s }
@@ -79,8 +99,6 @@ tokens :-
     ";"                                     { \p s -> Separator p }
     ","                                     { \p s -> Comma p }
     \.                                      { \p s -> Dot p }
-
-
 {
 data Token =
 -- FLOW  ---------------------------------------------
@@ -91,6 +109,24 @@ data Token =
     For AlexPosn |
     Continue AlexPosn |
     Break AlexPosn |
+-- COMMANDS  ---------------------------------------------
+    Free AlexPosn |
+    Print AlexPosn |
+    Read AlexPosn |
+    Alloc AlexPosn |
+    Addr AlexPosn |
+    Len AlexPosn |
+    SizeOf AlexPosn |
+-- TYPES  ---------------------------------------------
+    Int AlexPosn |
+    Double AlexPosn |
+    Bool AlexPosn |
+    String AlexPosn |
+    Pointer AlexPosn |
+    List AlexPosn |
+    Array AlexPosn |
+    Hashmap AlexPosn |
+    Tuple AlexPosn |
 -- SCOPES  ---------------------------------------------
     LeftBrace AlexPosn |
     RightBrace AlexPosn |
@@ -104,7 +140,7 @@ data Token =
     Expo AlexPosn |
     Plus AlexPosn |
     Minus AlexPosn |
-    Times AlexPosn |
+    Star AlexPosn |
     Div AlexPosn |
     LessThan AlexPosn |
     GreaterThan AlexPosn |
@@ -122,12 +158,12 @@ data Token =
     And AlexPosn |
     Or AlexPosn |
 -- LITERALS  -------------------------------------------
-    Double AlexPosn Double |
-    Int AlexPosn Int |
-    Bool AlexPosn Bool |
-    String AlexPosn String |
+    DoubleLit AlexPosn Double |
+    IntLit AlexPosn Int |
+    BoolLit AlexPosn Bool |
+    StringLit AlexPosn String |
 -- MAIN  ---------------------------------------------
-    Type AlexPosn String |
+    Struct AlexPosn |
     Id AlexPosn String |
     Return AlexPosn |
     Import AlexPosn |
