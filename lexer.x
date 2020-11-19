@@ -10,7 +10,9 @@ import System.IO.Unsafe
 %wrapper "posn"
 
 $digit = 0-9          -- digits
-$alpha = [a-zA-Z]     -- alphabetic characters
+$lowerAlpha = [a-z]     -- alphabetic characters
+$upperAlpha = [A-Z]
+$alpha = [a-zA-Z]
 
 tokens :-
 
@@ -93,7 +95,8 @@ tokens :-
     struct                                  { \p s -> Struct p }
     func                                    { \p s -> Func p }
     proc                                    { \p s -> Proc p }
-    $alpha [$alpha $digit \_]*              { \p s -> Id p s }
+    $lowerAlpha [$alpha $digit \_]*         { \p s -> Id p s }
+    $upperAlpha [$alpha $digit \_]*         { \p s -> TypeId p s }
     "#"                                     { \p s -> Hashtag p }
     ":"                                     { \p s -> Colon p }
     ";"                                     { \p s -> Separator p }
@@ -165,6 +168,7 @@ data Token =
 -- MAIN  ---------------------------------------------
     Struct AlexPosn |
     Id AlexPosn String |
+    TypeId AlexPosn String |
     Return AlexPosn |
     Import AlexPosn |
     Func AlexPosn |
