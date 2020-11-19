@@ -12,6 +12,12 @@ idToken = tokenPrim show update_pos get_token where
   get_token _  = Nothing
 
 
+typeIdToken :: Parsec [Token] st Token
+typeIdToken = tokenPrim show update_pos get_token where
+  get_token (TypeId p x) = Just (TypeId p x)
+  get_token _  = Nothing
+
+
 returnToken :: Parsec [Token] st Token
 returnToken = tokenPrim show update_pos get_token where
   get_token (Return p)  = Just (Return p)
