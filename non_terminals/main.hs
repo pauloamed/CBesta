@@ -18,6 +18,7 @@ import BindingGrammar
 programParser :: Parsec [Token] st [Token]
 programParser = (do   imports <- many importParser
                       blocks <- blocksParser
+                      eof
                       return (concat(imports) ++ blocks))
 
 
@@ -40,7 +41,7 @@ blocksParser = (do  blocks <- many blockParser
 blockParser :: Parsec [Token] st [Token]
 blockParser = (do   stmt <- stmtParser
                     sep <- separatorToken
-                    return stmt) <|>
+                    return (stmt ++ [sep])) <|>
               (do   enclosedBlocks <- enclosedBlocksParser
                     return enclosedBlocks)
 
@@ -64,24 +65,23 @@ stmtParser = (do  x <- continueToken <|> breakToken
                   return (derefPointer ++ assignmentsOp))
 
 
-
-
--- <stmt_id> -> ID (<assignments_op> | <funcall_op>)
+-- <stmt_id> -> ID ([indexAccess] <assignments_op> | <funcall_op>)
 stmtIdParser :: Parsec [Token] st [Token]
 stmtIdParser = (do  idd <- idToken
                     assignmentOrFuncall <- assignmentsOpParser <|> funcallOpParser
                     return (idd:assignmentOrFuncall))
 
 
--- <struct> -> STRUCT ID LEFT_BRACE { <declrs> }+ RIGHT_BRACE
+-- <struct> -> STRUCT TYPE_ID LEFT_BRACE { <declrs> }+ RIGHT_BRACE
 structParser :: Parsec [Token] st [Token]
 structParser = (do  struct <- structToken
-                    idd <- idToken
+                    idd <- typeIdToken
                     leftBrace <- leftBraceToken
                     declrs <- many1 (do x <- declrsParser
                                         return x)
                     rightBrace <- rightBraceToken
                     return (struct:idd:leftBrace:concat(declrs) ++ [rightBrace]))
+
 
 -- <compound_stmt> -> <control_structures> | <subprograms> | <struct>
 compoundStmtParser :: Parsec [Token] st [Token]
@@ -99,6 +99,7 @@ controlStructureParser =  (do   x <- whileParser <|> forParser <|> ifParser
 subprogramsParser :: Parsec [Token] st [Token]
 subprogramsParser = (do   x <- funcParser <|> procParser
                           return x)
+
 
 -- <func> -> FUNC <type> ID <enclosed_args> <enclosed_blocks>
 funcParser :: Parsec [Token] st [Token]

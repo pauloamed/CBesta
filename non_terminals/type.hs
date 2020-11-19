@@ -10,34 +10,39 @@ import OperatorsPrimTokens
 import ScopesPrimTokens
 import TypesPrimTokens
 
-
 -- <type> -> POINTER <enclosed_type>
---           | LIST <enclosed_type>
---           | ARRAY <enclosed_type>
---           | HASHMAP LESS_THAN <type> COMMA <type> GREATER_THAN
+--           | ARRAY LESS_THAN <type> COMMA INT_LIT GREATER_THAN
 --           | TUPLE LESS_THAN <types> GREATER_THAN
 --           | <simple_type>
---           | ID
+--           | TYPE_ID
 typeParser :: Parsec [Token] st [Token]
-typeParser = (do  x <- pointerToken <|> listToken <|> arrayToken
+typeParser = (do  x <- pointerToken
                   enclosedType <- enclosedTypeParser
                   return (x:enclosedType)) <|>
              (do  simpleType <- simpleTypeParser
                   return simpleType) <|>
-             (do  hashmap <- hashmapToken
+             (do  array <- arrayToken
                   lessThan <- lessThanToken
-                  typee1 <- typeParser
+                  typee <- typeParser
                   comma <- commaToken
-                  typee2 <- typeParser
+                  size <- intParser
                   greaterThan <- greaterThanToken
-                  return (hashmap:lessThan:typee1 ++ comma:typee2 ++ [greaterThan])) <|>
+                  return (array:lessThan:typee ++ comma:size ++ [greaterThan])) <|>
              (do  tuple <- tupleToken
                   lessThan <- lessThanToken
                   types <- typesParser
                   greaterThan <- greaterThanToken
-                  return (tuple:lessThan:types ++ [greaterThan]))
-                  -- (do  idd <- idToken
-                  --      return ([idd])) <|>
+                  return (tuple:lessThan:types ++ [greaterThan])) <|>
+             (do  idd <- typeIdToken
+                  return ([idd]))
+
+
+-- <int_parser> -> (INT_LIT, ID)
+intParser :: Parsec [Token] st [Token]
+intParser = (do   x <- (do  y <- intLitToken
+                            return ([y])) <|>
+                        idParser
+                  return x)
 
 
 -- <enclosed_type> -> LESS_THAN <type> GREATE_THAN
@@ -61,3 +66,14 @@ typesParser = (do   typee <- typeParser
 simpleTypeParser :: Parsec [Token] st [Token]
 simpleTypeParser = (do  x <- intToken <|> boolToken <|> doubleToken <|> stringToken
                         return [x])
+
+
+-- <id> -> ID [LEFT_BRACKET <int_parser> RIGHT_BRACKET]
+idParser :: Parsec [Token] st [Token]
+idParser = (do  idd <- idToken
+                maybeAccess <- (do  leftBracket <- leftBracketToken
+                                    intt <- intParser
+                                    rightBracket <- rightBracketToken
+                                    return (leftBracket:intt ++ [rightBracket])) <|>
+                                    (return [])
+                return (idd:maybeAccess))

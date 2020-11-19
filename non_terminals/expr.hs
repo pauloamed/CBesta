@@ -23,31 +23,32 @@ enclosedExprParser = (do  leftParen <- leftParenToken
                           return (leftParen:expr ++ [rightParen]))
 
 
--- <expr> -> [<cast>] <raw_expr>
+-- <expr> -> [<cast>] <uncasted_expr>
 exprParser :: Parsec [Token] st [Token]
 exprParser = (do  maybeCast <- castingParser <|> (return [])
-                  rawExpr <- rawExprParser
-                  return (maybeCast ++ rawExpr))
+                  uncExpr <- uncastedExprParser
+                  return (maybeCast ++ uncExpr))
 
 
--- <raw_expr> -> <un_op> <expr> | <enclosed_expr> | <raw_expr_term>
-rawExprParser :: Parsec [Token] st [Token]
-rawExprParser = (do   unop <- unopParser
-                      expr <- exprParser
-                      return (unop ++ expr)) <|>
-                (do   enclosedExpr <- enclosedExprParser
-                      return enclosedExpr) <|>
-                (do   rawExprTerm <- rawExprTermParser
-                      return rawExprTerm)
+
+-- <uncasted_expr> -> <un_op> <expr> | <expr_term>
+uncastedExprParser :: Parsec [Token] st [Token]
+uncastedExprParser =  (do   unop <- unopParser
+                            expr <- exprParser
+                            return (unop ++ expr)) <|>
+                      (do   exprTerm <- exprTermParser
+                            return exprTerm)
 
 
--- <raw_expr_term> -> <term> (<bin_op> <expr> | LAMBDA)
-rawExprTermParser :: Parsec [Token] st [Token]
-rawExprTermParser = (do   term <- termParser
-                          binopOrLambda <- (do  binop <- binopParser
-                                                expr <- exprParser
-                                                return (binop ++ expr)) <|> (return [])
-                          return (term ++ binopOrLambda))
+-- (1) + 1;
+
+-- <expr_term> -> <term> (<bin_op> <expr> | LAMBDA)
+exprTermParser :: Parsec [Token] st [Token]
+exprTermParser =  (do   term <- termParser
+                        binopOrLambda <- (do  binop <- binopParser
+                                              expr <- exprParser
+                                              return (binop ++ expr)) <|> (return [])
+                        return (term ++ binopOrLambda))
 
 
 -- <un_op> -> NEGATION | MINUS
@@ -81,7 +82,7 @@ castingParser = (do   leftBracket <- leftBracketToken
                       return (leftBracket:typee ++ [rightBracket]))
 
 
--- <term> ->  <deref_pointer> | <literal> | <command_with_ret> | <term_id> | STRING <split_op>
+-- <term> ->  <deref_pointer> | <literal_no_str> | <command_with_ret> | <term_id> | <string> [<split_op>] | <enclosed_expr>
 termParser :: Parsec [Token] st [Token]
 termParser = (do  derefPointer <- derefPointerParser
                   return derefPointer) <|>
@@ -91,14 +92,16 @@ termParser = (do  derefPointer <- derefPointerParser
                   return command) <|>
              (do  termId <- termIdParser
                   return termId) <|>
-             (do  strLit <- stringLitToken
-                  splitOp <- splitOpParser
-                  return (strLit:splitOp))
+             (do  encExpr <- enclosedExprParser
+                  return encExpr) <|>
+             (do  str <- stringLitToken <|> stringToken
+                  splitOp <- splitOpParser <|> (return [])
+                  return (str:splitOp))
 
 
--- <literal> -> INT_LIT | BOOL_LIT | DOUBLE_LIT | STRING_LIT
+-- <literal> -> INT_LIT | BOOL_LIT | DOUBLE_LIT
 literalParser :: Parsec [Token] st [Token]
-literalParser = (do   x <- intLitToken <|> boolLitToken <|> doubleLitToken <|> stringLitToken
+literalParser = (do   x <- intLitToken <|> boolLitToken <|> doubleLitToken
                       return [x])
 
 
@@ -118,16 +121,16 @@ allocParser = (do   alloc <- allocToken
 addrParser :: Parsec [Token] st [Token]
 addrParser = ( do addr <- addrToken
                   leftParen <- leftParenToken
-                  idd <- idToken
+                  idd <- idParser
                   rightParen <- rightParenToken
-                  return (addr:leftParen:idd:[rightParen]))
+                  return (addr:leftParen:idd ++ [rightParen]))
 
 
--- <len> -> LEN LEFT_PAREN ID RIGHT_PAREN
+-- <len> -> LEN LEFT_PAREN TYPE_ID RIGHT_PAREN
 lenParser :: Parsec [Token] st [Token]
 lenParser = ( do  len <- lenToken
                   leftParen <- leftParenToken
-                  idd <- idToken
+                  idd <- typeIdToken
                   rightParen <- rightParenToken
                   return (len:leftParen:idd:[rightParen]))
 
