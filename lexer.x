@@ -30,9 +30,10 @@ tokens :-
     print                                   { \p s -> Print p }
     read                                    { \p s -> Read p }
     alloc                                   { \p s -> Alloc p }
+    cast                                    { \p s -> Cast p }
     addr                                    { \p s -> Addr p }
     len                                     { \p s -> Len p }
-    sizeof                                  { \p s -> SizeOf p }
+    substr                                  { \p s -> Substr p }
 
 ---------------------- TYPES  -------------------------
 
@@ -118,8 +119,9 @@ data Token =
     Read AlexPosn |
     Alloc AlexPosn |
     Addr AlexPosn |
+    Cast AlexPosn |
     Len AlexPosn |
-    SizeOf AlexPosn |
+    Substr AlexPosn |
 -- TYPES  ---------------------------------------------
     Int AlexPosn |
     Double AlexPosn |

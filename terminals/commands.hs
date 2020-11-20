@@ -42,7 +42,13 @@ lenToken = tokenPrim show update_pos get_token where
   get_token _  = Nothing
 
 
-sizeOfToken :: Parsec [Token] st Token
-sizeOfToken = tokenPrim show update_pos get_token where
-  get_token (SizeOf p)  = Just (SizeOf p)
+castToken :: Parsec [Token] st Token
+castToken = tokenPrim show update_pos get_token where
+  get_token (Cast p)  = Just (Cast p)
+  get_token _  = Nothing
+
+
+substrToken :: Parsec [Token] st Token
+substrToken = tokenPrim show update_pos get_token where
+  get_token (Substr p)  = Just (Substr p)
   get_token _  = Nothing
