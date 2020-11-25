@@ -14,23 +14,32 @@ import CommandsPrimTokens
 
 import ExprGrammar
 
+import MemTable
+import SubProgTable
+import TypesTable
+import OurState
+
+
+
 -- <return> -> RETURN [ <expr> ]
-returnParser :: Parsec [Token] st [Token]
+returnParser :: ParsecT [Token] OurState IO([Token])
 returnParser = (do  ret <- returnToken
-                    maybeExpr <- exprParser <|> (return [])
+                    maybeExpr <- (do  (_, x) <- exprParser
+                                      return (x))
+                                  <|> (return [])
                     return (ret:maybeExpr))
 
 
 
 -- <enclosed_args> -> LEFT_PAREN <args> RIGHT_PAREN
-enclosedArgsParser :: Parsec [Token] st [Token]
+enclosedArgsParser :: ParsecT [Token] OurState IO([Token])
 enclosedArgsParser = (do  leftParen <- leftParenToken
                           args <- argsParser
                           rightParen <- rightParenToken
                           return (leftParen:args ++ [rightParen]))
 
 -- <args> -> <type> ID { COMMA <type> ID } | LAMBDA
-argsParser :: Parsec [Token] st [Token]
+argsParser :: ParsecT [Token] OurState IO([Token])
 argsParser = (do  typee <- typeParser
                   idd <- idToken
                   remainingArgs <- many (do   comma <- commaToken

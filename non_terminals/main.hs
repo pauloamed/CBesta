@@ -16,6 +16,12 @@ import DeclrGrammar
 import VoidCommandsGrammar
 import SubProgGrammar
 
+import MemTable
+import SubProgTable
+import TypesTable
+import OurState
+
+
 
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
@@ -23,7 +29,7 @@ import SubProgGrammar
 
 
 -- <program> -> { <import> } <blocks> // IMPORTS EH OPICIONAL
-programParser :: Parsec [Token] st [Token]
+programParser :: ParsecT [Token] OurState IO([Token])
 programParser = (do   imports <- many importParser
                       blocks <- blocksParser
                       eof
@@ -31,7 +37,7 @@ programParser = (do   imports <- many importParser
 
 
 -- <import> -> HASHTAG IMPORT STRING_LIT {SEPARATOR}
-importParser :: Parsec [Token] st [Token]
+importParser :: ParsecT [Token] OurState IO([Token])
 importParser = (do  hashtag <- hashtagToken
                     importt <- importToken
                     fileName <- stringLitToken
@@ -45,13 +51,13 @@ importParser = (do  hashtag <- hashtagToken
 
 
 -- <blocks> -> { <block> }
-blocksParser :: Parsec [Token] st [Token]
+blocksParser :: ParsecT [Token] OurState IO([Token])
 blocksParser = (do  blocks <- many blockParser
                     return (concat(blocks)))
 
 
 -- <block> -> <stmt> SEPARATOR | <enclosed_blocks>
-blockParser :: Parsec [Token] st [Token]
+blockParser :: ParsecT [Token] OurState IO([Token])
 blockParser = (do   stmt <- stmtParser
                     sep <- separatorToken
                     return (stmt ++ [sep])) <|>
@@ -60,7 +66,7 @@ blockParser = (do   stmt <- stmtParser
 
 
 -- <enclosed_blocks> -> LEFT_BRACE <blocks> RIGHT_BRACE
-enclosedBlocksParser :: Parsec [Token] st [Token]
+enclosedBlocksParser :: ParsecT [Token] OurState IO([Token])
 enclosedBlocksParser = (do  leftBrace <- leftBraceToken
                             blocks <- blocksParser
                             rightBrace <- rightBraceToken
@@ -73,7 +79,7 @@ enclosedBlocksParser = (do  leftBrace <- leftBraceToken
 
 
 -- <stmt> -> CONTINUE | BREAK | <return> | <void_command> | <compound_stmt> | <declrs> | <deref_pointer> <assignments_op> | <stmt_id>
-stmtParser :: Parsec [Token] st [Token]
+stmtParser :: ParsecT [Token] OurState IO([Token])
 stmtParser = (do  x <- continueToken <|> breakToken
                   return [x]) <|>
              (do  x <- returnParser <|> voidCommandParser <|> compoundStmtParser <|> declrsParser <|> stmtIdParser
@@ -86,7 +92,7 @@ stmtParser = (do  x <- continueToken <|> breakToken
 
 
 -- <stmt_id> -> ID ([<index_op>] <assignments_op> | <funcall_op>)
-stmtIdParser :: Parsec [Token] st [Token]
+stmtIdParser :: ParsecT [Token] OurState IO([Token])
 stmtIdParser = (do  idd <- idToken
                     assignmentOrFuncall <- (do  maybeIndex <- indexOpParser <|> (return [])
                                                 assignment <- assignmentsOpParser
@@ -99,7 +105,7 @@ stmtIdParser = (do  idd <- idToken
 
 
 -- <compound_stmt> -> <control_structures> | <subprograms> | <struct>
-compoundStmtParser :: Parsec [Token] st [Token]
+compoundStmtParser :: ParsecT [Token] OurState IO([Token])
 compoundStmtParser = (do  x <- controlStructureParser <|> subprogramsParser <|> structParser
                           return (x))
 
@@ -109,10 +115,11 @@ compoundStmtParser = (do  x <- controlStructureParser <|> subprogramsParser <|> 
 --------------------------------------------------------------------------------------------------------------
 
 -- <struct> -> STRUCT TYPE_ID LEFT_BRACE { <declrs> }+ RIGHT_BRACE
-structParser :: Parsec [Token] st [Token]
+structParser :: ParsecT [Token] OurState IO([Token])
 structParser = (do  struct <- structToken
                     idd <- typeIdToken
                     leftBrace <- leftBraceToken
+                    -- updateState(typesTable INSERT (getStruct idd declrs))
                     declrs <- many1 (do x <- declrsParser
                                         y <- separatorToken
                                         return (x ++ [y]))
@@ -123,16 +130,28 @@ structParser = (do  struct <- structToken
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
+{-
+Os subprogramas serao DECLARADOS com a flag EM_EXEC DESATIVADA
+e serao EXECUTADOS com a flag EM_EXEC ATIVADA
 
+Na declaracao, o bloco de tokens do subprograma tambem sera salvo na tabela de funcoes
+para futura execucao:
+  Quando um subpr for declarado, serao salvos:
+    seu protocolo
+    seu nome
+    seu retorno (se presente)
+    seus comandos (bloco de execucao)
+      esse como uma lista de Tokens
+-}
 
 -- <subprograms> -> <func> | <proc>
-subprogramsParser :: Parsec [Token] st [Token]
+subprogramsParser :: ParsecT [Token] OurState IO([Token])
 subprogramsParser = (do   x <- funcParser <|> procParser
                           return x)
 
 
 -- <func> -> FUNC <type> ID <enclosed_args> <enclosed_blocks>
-funcParser :: Parsec [Token] st [Token]
+funcParser :: ParsecT [Token] OurState IO([Token])
 funcParser =  (do   func <- funcToken
                     typee <- typeParser
                     idd <- idToken
@@ -142,7 +161,7 @@ funcParser =  (do   func <- funcToken
 
 
 -- <proc> -> PROC ID <enclosed_args> <enclosed_blocks>
-procParser :: Parsec [Token] st [Token]
+procParser :: ParsecT [Token] OurState IO([Token])
 procParser =  (do   procc <- procToken
                     idd <- idToken
                     enclosedArgs <- enclosedArgsParser
@@ -156,14 +175,14 @@ procParser =  (do   procc <- procToken
 
 
 -- <control_structures> -> <if> | <while> | <for>
-controlStructureParser :: Parsec [Token] st [Token]
+controlStructureParser :: ParsecT [Token] OurState IO([Token])
 controlStructureParser =  (do   x <- whileParser <|> forParser <|> ifParser
                                 return (x))
 
 
 
 -- <while> -> WHILE <enclosed_expr> <enclosed_blocks>
-whileParser :: Parsec [Token] st [Token]
+whileParser :: ParsecT [Token] OurState IO([Token])
 whileParser =   (do   while <- whileToken
                       enclosedExpr <- enclosedExprParser
                       enclosedBlock <- enclosedBlocksParser
@@ -171,12 +190,14 @@ whileParser =   (do   while <- whileToken
 
 
 -- <for> -> FOR LEFT_PAREN [ ( <declr> | <assignment> ) ] SEMICOLON [ <expr> ] SEMICOLON [ ( <declr> | <assignment> ) ] RIGHT_PAREN <enclosed_blocks>
-forParser :: Parsec [Token] st [Token]
+forParser :: ParsecT [Token] OurState IO([Token])
 forParser =   (do   for <- forToken
                     leftParen <- leftParenToken
                     maybeVarBinding1 <- assignmentsParser <|> declrsParser <|> (return [])
                     semicolon <- separatorToken
-                    maybeExpr <- exprParser <|> (return [])
+                    maybeExpr <- (do  (_, x) <- exprParser
+                                      return x) <|>
+                                (return [])
                     semicolon <- separatorToken
                     maybeVarBinding2 <- assignmentsParser <|> declrsParser <|> (return [])
                     rightParen <- rightParenToken
@@ -185,7 +206,7 @@ forParser =   (do   for <- forToken
 
 
 -- <if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
-ifParser :: Parsec [Token] st [Token]
+ifParser :: ParsecT [Token] OurState IO([Token])
 ifParser =  (do   iff <- ifToken
                   enclosedExpr <- enclosedExprParser
                   thenn <- thenToken

@@ -10,7 +10,7 @@ for line in input_str.split('\n'):
     hasArg = (len(lineTokens) == 4)
     tokens.append((lineTokens[0], hasArg))
 
-annot = "{}Token :: Parsec [Token] st Token"
+annot = "{}Token :: ParsecT [Token] st IO (Token)"
 header = "{}Token = tokenPrim show update_pos get_token where"
 firstLine = ["get_token ({} p)  = Just ({} p) ", "get_token ({} p x) = Just ({} p x)"]
 secondLine = "get_token _  = Nothing"

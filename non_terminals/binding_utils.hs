@@ -14,9 +14,14 @@ import CommandsPrimTokens
 
 import ExprGrammar
 
+import MemTable
+import SubProgTable
+import TypesTable
+import OurState
+
 
 -- <assign_expr> -> ASSIGN <expr>
-assignExprParser :: Parsec [Token] st [Token]
+assignExprParser :: ParsecT [Token] OurState IO([Token])
 assignExprParser = (do  assign <- assignToken
-                        expr <- exprParser
+                        (_, expr) <- exprParser
                         return (assign:expr))
