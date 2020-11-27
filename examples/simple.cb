@@ -1,1 +1,7 @@
-print(10 + 10 * 5 ^ 10);
+Bool fa := true, fb := true;
+
+if(fa) then{
+  if(fa) then{
+    print(fa);
+  };
+};

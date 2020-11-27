@@ -20,18 +20,18 @@ import SubProgTable
 import TypesTable
 import OurState
 
---
--- DECLR SEMANTICAMENTE SEMPRE VAI RESPONDER UMA LISTA DE (STRING, TYPE) = (NOME, TIPO E VALOR)
---
---
+import ExecutionUtils
+
+import Control.Monad.IO.Class
 
 
 -- <declrs> -> <type> <maybe_assigned_id>  { COMMA <maybe_assigned_id>}]
 declrsParser :: ParsecT [Token] OurState IO([Token])
-declrsParser = (do  typee <- typeParser
-                    assignedId <- maybeAssignedIdParser
+declrsParser = (do  (semanType, typee) <- typeParser
+
+                    assignedId <- maybeAssignedIdParser semanType
                     maybeAssigns <- many (do  comma <- commaToken
-                                              maybeAssignedIds <- maybeAssignedIdParser
+                                              maybeAssignedIds <- maybeAssignedIdParser semanType
                                               return (comma:maybeAssignedIds))
                     return ((typee ++ assignedId ++ concat(maybeAssigns))))
 
@@ -51,7 +51,13 @@ Solução B:
     Nested subprogram tem acesso ao escopo do pai?
 -}
 -- <maybe_assigned_id> -> ID [<assign_expr>]
-maybeAssignedIdParser :: ParsecT [Token] OurState IO([Token])
-maybeAssignedIdParser = (do   idd <- idToken
-                              maybeAssignExpr <- assignExprParser <|> (return [])
-                              return (idd:maybeAssignExpr))
+maybeAssignedIdParser :: Type -> ParsecT [Token] OurState IO([Token])
+maybeAssignedIdParser typee = (do   idd <- idToken
+                                    (val, maybeAssignExpr) <- assignExprParser <|> (return (NULL, []))
+                                    s <- getState
+                                    if val == NULL then -- salvar na tabela com typee
+                                      updateState(memTable INSERT (getStringFromId idd, getScope s, typee))
+                                    else -- checar tipo e salvar na tabela usando val
+                                      updateState(memTable INSERT (getStringFromId idd, getScope s, val))
+
+                                    return ((idd:maybeAssignExpr)))

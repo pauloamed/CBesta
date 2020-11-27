@@ -21,7 +21,7 @@ import OurState
 
 
 -- <assign_expr> -> ASSIGN <expr>
-assignExprParser :: ParsecT [Token] OurState IO([Token])
+assignExprParser :: ParsecT [Token] OurState IO(Type, [Token])
 assignExprParser = (do  assign <- assignToken
-                        (_, expr) <- exprParser
-                        return (assign:expr))
+                        (val, expr) <- exprParser
+                        return (val, (assign:expr)))

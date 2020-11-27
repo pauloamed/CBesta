@@ -21,6 +21,7 @@ import SubProgTable
 import TypesTable
 import OurState
 
+import ExecutionUtils
 
 
 --------------------------------------------------------------------------------------------------------------
@@ -61,7 +62,9 @@ blockParser :: ParsecT [Token] OurState IO([Token])
 blockParser = (do   stmt <- stmtParser
                     sep <- separatorToken
                     return (stmt ++ [sep])) <|>
-              (do   enclosedBlocks <- enclosedBlocksParser
+              (do   updateState (addToScope "")
+                    enclosedBlocks <- enclosedBlocksParser
+                    updateState removeFromScope
                     return enclosedBlocks)
 
 
@@ -85,17 +88,15 @@ stmtParser = (do  x <- continueToken <|> breakToken
              (do  x <- returnParser <|> voidCommandParser <|> compoundStmtParser <|> declrsParser <|> stmtIdParser
                   return x) <|>
              (do  derefPointer <- derefPointerParser
-                  assignmentsOp <- assignmentsOpParser
+                  assignmentsOp <- assignmentsOpParser derefPointer
                   return (derefPointer ++ assignmentsOp))
-
-
 
 
 -- <stmt_id> -> ID ([<index_op>] <assignments_op> | <funcall_op>)
 stmtIdParser :: ParsecT [Token] OurState IO([Token])
 stmtIdParser = (do  idd <- idToken
                     assignmentOrFuncall <- (do  maybeIndex <- indexOpParser <|> (return [])
-                                                assignment <- assignmentsOpParser
+                                                assignment <- assignmentsOpParser (idd:maybeIndex)
                                                 return (maybeIndex ++ assignment)) <|>
                                             funcallOpParser
                     return (idd:assignmentOrFuncall))
@@ -153,7 +154,7 @@ subprogramsParser = (do   x <- funcParser <|> procParser
 -- <func> -> FUNC <type> ID <enclosed_args> <enclosed_blocks>
 funcParser :: ParsecT [Token] OurState IO([Token])
 funcParser =  (do   func <- funcToken
-                    typee <- typeParser
+                    (_, typee) <- typeParser
                     idd <- idToken
                     enclosedArgs <- enclosedArgsParser
                     enclosedBlocks <- enclosedBlocksParser
@@ -184,7 +185,7 @@ controlStructureParser =  (do   x <- whileParser <|> forParser <|> ifParser
 -- <while> -> WHILE <enclosed_expr> <enclosed_blocks>
 whileParser :: ParsecT [Token] OurState IO([Token])
 whileParser =   (do   while <- whileToken
-                      enclosedExpr <- enclosedExprParser
+                      (_, enclosedExpr) <- enclosedExprParser
                       enclosedBlock <- enclosedBlocksParser
                       return (while:enclosedExpr ++ enclosedBlock))
 
@@ -205,14 +206,55 @@ forParser =   (do   for <- forToken
                     return (for:leftParen:maybeVarBinding1 ++ semicolon:maybeExpr ++ semicolon:maybeVarBinding2 ++ rightParen:enclosedBlock))
 
 
+{-
+O problema: O IF pode ter um ELSE
+
+Se a flag de execução estiver ativada
+  Ou o IF ou o ELSE serao executados
+    Se a condicao do IF for verdadeira, os blocos devem ser executados
+    Caso contrario, os blocos do ELSE deverao ser executados
+
+Se entrar no IF com exec OFF, nada acontece
+Se entrar no IF com exec ON,
+  OU O bloco do IF acontece
+  OU O bloco do ELSE acontece
+
+
+-}
+
 -- <if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
 ifParser :: ParsecT [Token] OurState IO([Token])
 ifParser =  (do   iff <- ifToken
-                  enclosedExpr <- enclosedExprParser
+                  (exprValue, enclosedExpr) <- enclosedExprParser
                   thenn <- thenToken
-                  enclosedBlock <- enclosedBlocksParser
-                  maybeElse <- (do  elsee <- elseToken
-                                    ifOrEnclosed <- ifParser <|> enclosedBlocksParser
-                                    return (elsee:ifOrEnclosed)) <|>
-                                (return [])
-                  return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse))
+                  s <- getState
+                  updateState (addToScope "if")
+                  if (not (isExecOn s)) then do
+                    enclosedBlock <- enclosedBlocksParser
+                    updateState removeFromScope
+                    maybeElse <- maybeElseParser
+                    return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse)
+                  else do
+                    if getBoolValue exprValue then do
+                      enclosedBlock <- enclosedBlocksParser
+                      updateState removeFromScope
+                      updateState turnExecOff
+                      maybeElse <- maybeElseParser
+                      updateState turnExecOn
+                      return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse)
+                    else do
+                      updateState turnExecOff
+                      enclosedBlock <- enclosedBlocksParser
+                      updateState removeFromScope
+                      updateState turnExecOn
+                      maybeElse <- maybeElseParser
+                      return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse))
+
+
+maybeElseParser :: ParsecT [Token] OurState IO([Token])
+maybeElseParser = (do   updateState (addToScope "if")
+                        elsee <- elseToken
+                        ifOrEnclosed <- ifParser <|> enclosedBlocksParser
+                        updateState removeFromScope
+                        return (elsee:ifOrEnclosed)) <|>
+                  (return [])

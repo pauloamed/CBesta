@@ -40,10 +40,10 @@ enclosedArgsParser = (do  leftParen <- leftParenToken
 
 -- <args> -> <type> ID { COMMA <type> ID } | LAMBDA
 argsParser :: ParsecT [Token] OurState IO([Token])
-argsParser = (do  typee <- typeParser
+argsParser = (do  (_, typee) <- typeParser
                   idd <- idToken
                   remainingArgs <- many (do   comma <- commaToken
-                                              typee <- typeParser
+                                              (_, typee) <- typeParser
                                               idd <- idToken
                                               return (comma:typee ++ [idd]))
                   return (typee ++ idd:(concat remainingArgs))) <|>

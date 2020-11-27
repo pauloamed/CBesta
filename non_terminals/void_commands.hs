@@ -45,7 +45,10 @@ printParser = (do printt <- printToken
                   (val, expr) <- exprParser
                   rightParen <- rightParenToken
 
-                  liftIO (print val)
+                  s <- getState
+
+                  if isExecOn s then liftIO (print val)
+                  else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))
 

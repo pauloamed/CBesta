@@ -85,7 +85,7 @@ tokens :-
 
     \-?$digit+\.$digit+                     { \p s -> DoubleLit p (read s) }
     \-?$digit+                              { \p s -> IntLit p (read s) }
-    ("true" | "false")                      { \p s -> BoolLit p (read s) }
+    ("true" | "false")                      { \p s -> BoolLit p (boolVal s) }
     \"[^\"]*\"                              { \p s -> StringLit p s }
 
 -------------------------- MAIN ------------------------------------
@@ -164,7 +164,7 @@ data Token =
     Or AlexPosn |
 -- LITERALS  -------------------------------------------
     DoubleLit AlexPosn Double |
-    IntLit AlexPosn Int |
+    IntLit AlexPosn Integer |
     BoolLit AlexPosn Bool |
     StringLit AlexPosn String |
 -- MAIN  ---------------------------------------------
@@ -182,6 +182,9 @@ data Token =
     Dot AlexPosn
     deriving (Eq,Show)
 
+
+boolVal "true" = True
+boolVal "false" = False
 
 
 getTokens fn = unsafePerformIO (getTokensAux fn)

@@ -30,31 +30,33 @@ type TokenParser = ParsecT [Token] OurState IO (Token)
 --           | TUPLE LESS_THAN <types> GREATER_THAN
 --           | INT | BOOL | DOUBLE | STRING
 --           | TYPE_ID
-typeParser :: ParsecT [Token] OurState IO([Token])
-typeParser = (do  x <- pointerToken
-                  lessThan <- lessThanToken
-                  typee <- typeParser
-                  greaterThan <- greaterThanToken
-                  return (x:lessThan:typee ++ [greaterThan])) <|>
-             (do  simpleType <- intToken <|> boolToken <|> doubleToken <|> stringToken
-                  return [simpleType]) <|>
-             (do  array <- arrayToken
-                  lessThan <- lessThanToken
-                  (_, size) <- exprParser
-                  comma <- commaToken
-                  typee <- typeParser
-                  greaterThan <- greaterThanToken
-                  return (array:lessThan:typee ++ comma:size ++ [greaterThan])) <|>
-             (do  tuple <- tupleToken
-                  lessThan <- lessThanToken
-                  typee <- typeParser
-                  remaining <- many1 (do   comma <- commaToken
-                                           typee <- typeParser
-                                           return (comma:typee))
-                  greaterThan <- greaterThanToken
-                  return (tuple:lessThan:typee ++ concat(remaining) ++ [greaterThan])) <|>
-             (do  idd <- typeIdToken
-                  return ([idd]))
+typeParser :: ParsecT [Token] OurState IO (Type, [Token])
+typeParser = (do  simpleType <- intToken <|> boolToken <|> doubleToken <|> stringToken
+                  return (getSemanticType simpleType, [simpleType]))
+                  -- <|>
+             --  (do  x <- pointerToken
+             --      lessThan <- lessThanToken
+             --      typee <- typeParser
+             --      greaterThan <- greaterThanToken
+             --      return (x:lessThan:typee ++ [greaterThan])) <|>
+             -- (do  array <- arrayToken
+             --      lessThan <- lessThanToken
+             --      (_, size) <- exprParser
+             --      comma <- commaToken
+             --      typee <- typeParser
+             --      greaterThan <- greaterThanToken
+             --      return (array:lessThan:typee ++ comma:size ++ [greaterThan])) <|>
+             -- (do  tuple <- tupleToken
+             --      lessThan <- lessThanToken
+             --      typee <- typeParser
+             --      remaining <- many1 (do   comma <- commaToken
+             --                               typee <- typeParser
+             --                               return (comma:typee))
+             --      greaterThan <- greaterThanToken
+             --      return (tuple:lessThan:typee ++ concat(remaining) ++ [greaterThan])) <|>
+             -- (do  idd <- typeIdToken
+             -- -- ta na tabela? se n tiver, da erro
+             --      return ([idd]))
 
 
 -----------------------------------------------------------------------------------------------
@@ -77,11 +79,11 @@ idParser = (do  idd <- idToken
 
 
 -- <enclosed_expr> -> LEFT_PAREN <expr> RIGHT_PAREN
-enclosedExprParser :: ParsecT [Token] OurState IO([Token])
+enclosedExprParser :: ParsecT [Token] OurState IO (Type, [Token])
 enclosedExprParser = (do  leftParen <- leftParenToken
-                          (_, expr) <- exprParser
+                          (val, expr) <- exprParser
                           rightParen <- rightParenToken
-                          return (leftParen:expr ++ [rightParen]))
+                          return (val, leftParen:expr ++ [rightParen]))
 
 
 remainingExprParser :: (PParser, TokenParser, (Type, [Token])) -> ParsecT [Token] OurState IO (Type, [Token])
@@ -90,6 +92,12 @@ remainingExprParser (ruleParser, opParser, x) = (do   op <- opParser
                                                       result <- remainingExprParser (ruleParser, opParser, (eval x op y))
                                                       return (result)) <|> (return x)
 
+
+remainingExprParserRight :: (PParser, TokenParser, (Type, [Token])) -> ParsecT [Token] OurState IO (Type, [Token])
+remainingExprParserRight (ruleParser, opParser, x) = (do  op <- opParser
+                                                          y <- ruleParser -- retorna lista de tokens e futuramente um Type
+                                                          result <- remainingExprParserRight (ruleParser, opParser, y)
+                                                          return (eval x op y)) <|> (return x)
 
 -- <expr> -> <expr_7> <remaining_expr>(<expr7>, OR)
 exprParser :: ParsecT [Token] OurState IO (Type, [Token])
@@ -145,12 +153,9 @@ expr2Parser = (do   unop <- (do   x <- negationToken <|> minusToken
 
 -- <expr_1> -> <value> [ EXP <expr_2>]
 expr1Parser :: ParsecT [Token] OurState IO (Type, [Token])
-expr1Parser = (do   (x, value) <- valueParser
-                    remainingExpr <- (do  t <- expoToken
-                                          (_, expr2) <- expr2Parser
-                                          return (t:expr2)) <|>
-                                     (return [])
-                    return (x, (value ++ remainingExpr)))
+expr1Parser = (do   value <- valueParser
+                    result <- remainingExprParserRight (expr2Parser, expoToken, value)
+                    return (result))
 
 
 -- <un_op> -> NEGATION | MINUS
@@ -162,13 +167,13 @@ unopParser =  (do   x <- negationToken <|> minusToken
 -- <value> ->  <deref_pointer> | <literal> | <command_with_ret> | <value_id> | <enclosed_expr>
 valueParser :: ParsecT [Token] OurState IO (Type, [Token])
 valueParser = (do   literal <- literalParser
-                    return literal)
+                    return literal) <|>
+              (do   valueId <- valueIdParser
+                    return valueId)
               -- (do   derefPointer <- derefPointerParser
               --       return derefPointer) <|>
               -- (do   command <- commandWithRetParser
               --       return command) <|>
-              -- (do   value <- valueIdParser
-              --       return value) <|>
               -- (do   encExpr <- enclosedExprParser
               --       return encExpr)
 
@@ -185,10 +190,13 @@ literalParser = (do   x <- intLitToken <|> boolLitToken <|> doubleLitToken <|> s
 
 
 -- <value_id> -> ID [(<index_op> | <funcall>)]
-valueIdParser :: ParsecT [Token] OurState IO([Token])
+valueIdParser :: ParsecT [Token] OurState IO(Type, [Token])
 valueIdParser = (do   idd <- idToken
-                      funcallOpOrSplitOp <- funcallOpParser <|> indexOpParser <|> (return [])
-                      return (idd:funcallOpOrSplitOp))
+                      -- funcallOpOrIndexOp <- funcallOpParser <|> indexOpParser <|> (return [])
+                      funcallOpOrIndexOp <- (return [])
+                      s <- getState
+                      
+                      return (getVarFromState (getStringFromId idd, getScope s, NULL) s,(idd:funcallOpOrIndexOp)))
 
 
 -- <index_op> -> LEFT_BRACKET <expr> RIGHT_BRACKET [<index>]
@@ -254,7 +262,7 @@ castParser = (do  cast <- castToken
                   lp <- leftParenToken
                   (_, expr) <- exprParser
                   c <- commaToken
-                  t <- typeParser
+                  (_, t) <- typeParser
                   rp <- rightParenToken
                   return (cast:lp:expr ++ c:t ++ [rp]))
 
@@ -263,7 +271,7 @@ castParser = (do  cast <- castToken
 allocParser :: ParsecT [Token] OurState IO([Token])
 allocParser = (do   alloc <- allocToken
                     lp <- leftParenToken
-                    typee <- typeParser
+                    (_, typee) <- typeParser
                     rp <- rightParenToken
                     return (alloc:lp:typee ++ [rp]))
 

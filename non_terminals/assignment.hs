@@ -19,6 +19,8 @@ import SubProgTable
 import TypesTable
 import OurState
 
+import ExecutionUtils
+
 
 -- <assignments> -> <assignment> <remaining_assign>
 assignmentsParser :: ParsecT [Token] OurState IO([Token])
@@ -28,10 +30,14 @@ assignmentsParser = (do   assignment <- assignmentParser
 
 
 -- <assignments_op> -> <assign_expr> <remaining_assign>
-assignmentsOpParser :: ParsecT [Token] OurState IO([Token])
-assignmentsOpParser = (do   assignExpr <- assignExprParser
-                            remaining <- remainingAssignsParser
-                            return (assignExpr ++ remaining))
+-- TODO ajeitar o getStringFRomId
+assignmentsOpParser :: [Token] -> ParsecT [Token] OurState IO([Token])
+assignmentsOpParser (idd:prefix) = (do  (exprVal, assignExpr) <- assignExprParser
+                                        s <- getState
+                                        updateState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
+
+                                        remaining <- remainingAssignsParser
+                                        return (assignExpr ++ remaining))
 
 
 {-
@@ -45,11 +51,16 @@ Isso ficando latente, retornaria uma tupla
 que so seria executada quando o bloco fosse executado (quando?)
 
 -}
+
 -- <assignment> -> (<id> | <deref_pointer>) <assign_expr>
+-- TODO ajeitar o getStringFRomId
 assignmentParser :: ParsecT [Token] OurState IO([Token])
-assignmentParser = (do  x <- idParser <|> derefPointerParser
-                        assignExpr <- assignExprParser
-                        return (x ++ assignExpr))
+assignmentParser = (do  (idd:x) <- idParser <|> derefPointerParser
+                        (exprVal, assignExpr) <- assignExprParser
+
+                        updateState(memTable UPDATE (getStringFromId idd, "", exprVal))
+
+                        return ((idd:x) ++ assignExpr))
 
 
 {-
