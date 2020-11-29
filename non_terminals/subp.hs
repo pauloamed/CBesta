@@ -17,7 +17,9 @@ import ExprGrammar
 import MemTable
 import SubProgTable
 import TypesTable
+
 import OurState
+import OurType
 
 
 
@@ -30,22 +32,19 @@ returnParser = (do  ret <- returnToken
                     return (ret:maybeExpr))
 
 
-
--- <enclosed_args> -> LEFT_PAREN <args> RIGHT_PAREN
-enclosedArgsParser :: ParsecT [Token] OurState IO([Token])
-enclosedArgsParser = (do  leftParen <- leftParenToken
-                          args <- argsParser
-                          rightParen <- rightParenToken
-                          return (leftParen:args ++ [rightParen]))
-
-
 -- <args> -> <type> ID { COMMA <type> ID } | LAMBDA
-argsParser :: ParsecT [Token] OurState IO([Token])
-argsParser = (do  (_, typee) <- typeParser
+argsParser :: ParsecT [Token] OurState IO([Type], [Token])
+argsParser = (do  (semanType, tokenType) <- typeParser
                   idd <- idToken
-                  remainingArgs <- many (do   comma <- commaToken
-                                              (_, typee) <- typeParser
-                                              idd <- idToken
-                                              return (comma:typee ++ [idd]))
-                  return (typee ++ idd:(concat remainingArgs))) <|>
-                (return [])
+                  (remainingArgsSeman, remainingArgsTokens) <- remainingArgsParser
+                  return ((semanType:remainingArgsSeman, tokenType ++ idd:remainingArgsTokens))) <|>
+              (return ([], []))
+
+
+remainingArgsParser :: ParsecT [Token] OurState IO([Type], [Token])
+remainingArgsParser = (do   comma <- commaToken
+                            (semanType, tokenType) <- typeParser
+                            idd <- idToken
+                            (tailSemanTypes, tailTokenTypes) <- remainingArgsParser
+                            return ((semanType:tailSemanTypes), comma:tokenType ++ idd:tailTokenTypes)) <|>
+                      (return ([], []))

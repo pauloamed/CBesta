@@ -21,6 +21,8 @@ instance Show Type where
     show (DoubleType x) = show x
     show (BoolType x) = show x
     show (StringType x) = show x
-    show (StructType (x, (y:_))) = id (x ++ show y)
+    show (StructType (x, (y:_))) = id ("Struct : " ++ x ++ " : " ++ show y)
+    show (ArrayType (x, (y:_))) = id ("Array : " ++ (show x) ++ " : " ++ show y)
+    show (PointerType (x, (idd, sp))) = id ("Pointer : " ++ (show x) ++ " : (" ++ (show idd) ++ ", " ++ (show sp) ++ ")")
     show (NULL) = id ">>NULL<<"
     show _ = id ">>not implemented<<"

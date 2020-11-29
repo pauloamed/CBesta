@@ -34,23 +34,23 @@ type TokenParser = ParsecT [Token] OurState IO (Token)
 --           | INT | BOOL | DOUBLE | STRING
 --           | TYPE_ID
 typeParser :: ParsecT [Token] OurState IO (Type, [Token])
-typeParser = (do  simpleType <- intToken <|> boolToken <|> doubleToken <|> stringToken
-                  return (getSemanticType simpleType, [simpleType])) <|>
+typeParser = (do  simpleTypeToken <- intToken <|> boolToken <|> doubleToken <|> stringToken
+                  return (createSimpleType simpleTypeToken, [simpleTypeToken])) <|>
              (do  idd <- typeIdToken
                   s <- getState
-                  return (getTypeFromState (getStringFromId idd) s, [idd]))
-             --  (do  x <- pointerToken
-             --      lessThan <- lessThanToken
-             --      typee <- typeParser
-             --      greaterThan <- greaterThanToken
-             --      return (x:lessThan:typee ++ [greaterThan])) <|>
-             -- (do  array <- arrayToken
-             --      lessThan <- lessThanToken
-             --      (_, size) <- exprParser
-             --      comma <- commaToken
-             --      typee <- typeParser
-             --      greaterThan <- greaterThanToken
-             --      return (array:lessThan:typee ++ comma:size ++ [greaterThan])) <|>
+                  return (getTypeFromState (getStringFromId idd) s, [idd])) <|>
+             (do  array <- arrayToken
+                  lessThan <- lessThanToken
+                  (arraySize, size) <- exprParser
+                  comma <- commaToken
+                  (semanType, typeToken) <- typeParser
+                  greaterThan <- greaterThanToken
+                  return (createArray arraySize semanType, (array:lessThan:typeToken ++ comma:size ++ [greaterThan]))) <|>
+             (do  x <- pointerToken
+                  lessThan <- lessThanToken
+                  (semanType, typeToken) <- typeParser
+                  greaterThan <- greaterThanToken
+                  return (createPointer semanType, x:lessThan:typeToken ++ [greaterThan]))
 
 
 -----------------------------------------------------------------------------------------------

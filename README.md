@@ -28,6 +28,7 @@ na linha 13 de `parser.hs`
 -- guardarão (nome, retorno, args, codigo) como (String, Type, [Type], [Token])
 -- como re executar a lista de tokens?
 -- como controlar os returns?
+-- como usar o cabecalho (parametros) na exeuccao da funcao?
 - while e for
 -- funcao recursiva para simular iteracao
 - struct
@@ -41,13 +42,23 @@ na linha 13 de `parser.hs`
 - array
 -- acesso/controle dos elementos
 - ret commands
--- alloc
+-- alloc (30.11)
 -- addr (30.11)
 --- criar uma struct padrao (ok?) pra armazenar o retorno de addr (endereco: id, escopo)
 -- len
--- substr
---- dar erro ou retornar vazia qnd intervs invalidos sao passados?
 - getStringFromId
 -- hj em dia trata token, mas vai ter que tratar Parser (indexacao)
 -- botar um get scope no parser do id tbm?
 - sair do escopo, limpar as variaveis
+
+- erros
+-- assignment
+-- como indicar erros?
+-- dupla declaracao
+--- variaveis
+--- funcs, procs
+--- structs
+-- substr
+--- dar erro ou retornar vazia qnd intervs invalidos sao passados?
+-- compatibilidade de tipos
+--- tamanho de array tem q ser int

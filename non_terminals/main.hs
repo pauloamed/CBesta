@@ -162,20 +162,30 @@ subprogramsParser = (do   x <- funcParser <|> procParser
 -- <func> -> FUNC <type> ID <enclosed_args> <enclosed_blocks>
 funcParser :: ParsecT [Token] OurState IO([Token])
 funcParser =  (do   func <- funcToken
-                    (_, typee) <- typeParser
+                    (semanType, typee) <- typeParser
                     idd <- idToken
-                    enclosedArgs <- enclosedArgsParser
+                    leftParen <- leftParenToken
+                    (argsSeman, args) <- argsParser
+                    rightParen <- rightParenToken
                     enclosedBlocks <- enclosedBlocksParser
-                    return (func:typee ++ idd:enclosedArgs ++ enclosedBlocks))
+
+                    updateState (funcTable INSERT (getStringFromId idd, semanType, argsSeman, args ++ enclosedBlocks))
+
+                    return (func:typee ++ idd:leftParen:args ++ rightParen:enclosedBlocks))
 
 
 -- <proc> -> PROC ID <enclosed_args> <enclosed_blocks>
 procParser :: ParsecT [Token] OurState IO([Token])
 procParser =  (do   procc <- procToken
                     idd <- idToken
-                    enclosedArgs <- enclosedArgsParser
+                    leftParen <- leftParenToken
+                    (argsSeman, args) <- argsParser
+                    rightParen <- rightParenToken
                     enclosedBlocks <- enclosedBlocksParser
-                    return (procc:idd:enclosedArgs ++ enclosedBlocks))
+
+                    updateState (procTable INSERT (getStringFromId idd, argsSeman, args ++ enclosedBlocks))
+
+                    return (procc:idd:leftParen:args ++ rightParen:enclosedBlocks))
 
 
 --------------------------------------------------------------------------------------------------------------
