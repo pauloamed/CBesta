@@ -1,5 +1,1 @@
-struct Teste{
-  Int x := 10;
-};
-
-print(10);
+print(substr("abc", 2, 0));

@@ -9,12 +9,23 @@ eval :: (Type, [Token]) -> Token -> (Type, [Token]) -> (Type, [Token])
 eval (typeX, xTokens) opToken (typeY, yTokens) = (evalType typeX opToken typeY, xTokens ++ opToken : yTokens)
 
 
-fastExpo :: Integer -> Integer -> Integer
+fastExpo :: Int -> Int -> Int
 fastExpo x 0 = 1
 fastExpo x 1 = x
 fastExpo x n =
         if (mod n 2) == 0 then (fastExpo x (div n 2)) ^ 2
         else ((fastExpo x (div n 2)) ^ 2) * x
+
+
+getSubstr :: Type -> Type -> Type -> Type
+getSubstr (IntType l) (IntType r) (StringType str) = (StringType (drop l (take r str)))
+getSubstr _ _ _ = undefined
+
+
+evalUnopType :: Token -> Type -> Type
+evalUnopType (Negation _) (BoolType x) = (BoolType (not x))
+evalUnopType (Minus _) (IntType x) = (IntType (-x))
+evalUnopType (Minus _) (DoubleType x) = (DoubleType (-x))
 
 
 evalType :: Type -> Token -> Type -> Type

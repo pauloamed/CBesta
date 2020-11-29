@@ -6,14 +6,14 @@ import Text.Parsec
 
 data Type =
     NULL |
-    IntType Integer |
+    IntType Int |
     DoubleType Double |
     BoolType Bool |
     StringType String |
     StructType (String, [(String, Type)]) | -- nome seguido de uma lista de nomes e Types (tipo + valor) |
     PointerType (Type, (String, String)) |
-    ArrayType (Integer, [Type]) | -- tamanho, lista com variaveis/valores, escopo e nome. como garantir consistencia de tipo?
-    TupleType (Integer, [Type]) -- lista de vars, escopo e nome
+    ArrayType (Int, [Type]) | -- tamanho, lista com variaveis/valores, escopo e nome. como garantir consistencia de tipo?
+    TupleType (Int, [Type]) -- lista de vars, escopo e nome
     deriving (Eq)
     -- deriving (Eq, Show)
 
@@ -21,7 +21,7 @@ instance Show Type where
     show (IntType x) = show x
     show (DoubleType x) = show x
     show (BoolType x) = show x
-    show (StringType x) = id x
+    show (StringType x) = show x
     show (StructType (x, (y:_))) = id (x ++ show y)
     show (NULL) = id ">>NULL<<"
     show _ = id ">>not implemented<<"

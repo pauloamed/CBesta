@@ -144,11 +144,11 @@ expr3Parser = (do   expr2 <- expr2Parser
 
 -- <expr_2> -> [(MINUS | NEG)] <expr_1>
 expr2Parser :: ParsecT [Token] OurState IO(Type, [Token])
-expr2Parser = (do   unop <- (do   x <- negationToken <|> minusToken
-                                  return ([x])) <|>
-                            (return [])
+expr2Parser = (do   unop <- negationToken <|> minusToken
                     (x, expr1) <- expr1Parser
-                    return (x, unop ++ expr1))
+                    return (evalUnopType unop x, [unop] ++ expr1)) <|>
+              (do   (x, expr1) <- expr1Parser
+                    return (x, expr1))
 
 
 -- <expr_1> -> <value> [ EXP <expr_2>]
@@ -158,24 +158,18 @@ expr1Parser = (do   value <- valueParser
                     return (result))
 
 
--- <un_op> -> NEGATION | MINUS
-unopParser :: ParsecT [Token] OurState IO([Token])
-unopParser =  (do   x <- negationToken <|> minusToken
-                    return ([x]))
-
-
 -- <value> ->  <deref_pointer> | <literal> | <command_with_ret> | <value_id> | <enclosed_expr>
 valueParser :: ParsecT [Token] OurState IO (Type, [Token])
 valueParser = (do   literal <- literalParser
                     return literal) <|>
               (do   valueId <- valueIdParser
-                    return valueId)
+                    return valueId) <|>
+              (do   encExpr <- enclosedExprParser
+                    return encExpr) <|>
+              (do   command <- commandWithRetParser
+                    return command)
               -- (do   derefPointer <- derefPointerParser
               --       return derefPointer) <|>
-              -- (do   command <- commandWithRetParser
-              --       return command) <|>
-              -- (do   encExpr <- enclosedExprParser
-              --       return encExpr)
 
 
 -- <literal> -> INT_LIT | BOOL_LIT | DOUBLE_LIT | STRING_LIT
@@ -195,7 +189,7 @@ valueIdParser = (do   idd <- idToken
                       -- funcallOpOrIndexOp <- funcallOpParser <|> indexOpParser <|> (return [])
                       funcallOpOrIndexOp <- (return [])
                       s <- getState
-                      
+
                       return (getVarFromState (getStringFromId idd, getScope s, NULL) s,(idd:funcallOpOrIndexOp)))
 
 
@@ -251,8 +245,9 @@ funcallOpParser = (do   leftParen <- leftParenToken
 --------------------------------------------------------------------------------------------
 
 -- <command_with_ret> -> <alloc> | <addr> | <len> | <cast> | <substr>
-commandWithRetParser :: ParsecT [Token] OurState IO([Token])
-commandWithRetParser = (do  x <- allocParser <|> addrParser <|> lenParser <|> castParser <|> subStrParser
+commandWithRetParser :: ParsecT [Token] OurState IO(Type, [Token])
+commandWithRetParser = (do  x <- subStrParser
+-- <|> addrParser <|> lenParser <|> castParser <|> allocParser
                             return x)
 
 
@@ -294,14 +289,17 @@ lenParser = ( do  len <- lenToken
                   return (len:leftParen:idd ++ [rightParen]))
 
 
+--  subst(string, ini, excl)
 -- <substr> -> SUBSTR LEFT_PAREN <expr> COMMA <expr> COMMA <expr> RIGHT_PAREN
-subStrParser :: ParsecT [Token] OurState IO([Token])
+subStrParser :: ParsecT [Token] OurState IO(Type, [Token])
 subStrParser = (do  substr <- substrToken
                     lp <- leftParenToken
-                    (_, str) <- exprParser
+                    (strVal, str) <- exprParser
                     c1 <- commaToken
-                    (_, left) <- exprParser
+                    (leftVal, left) <- exprParser
                     c2 <- commaToken
-                    (_, right) <- exprParser
+                    (rightVal, right) <- exprParser
                     rp <- rightParenToken
-                    return (substr:lp:str ++ c1:left ++ c2:right ++ [rp]))
+
+
+                    return (getSubstr leftVal rightVal strVal, substr:lp:str ++ c1:left ++ c2:right ++ [rp]))

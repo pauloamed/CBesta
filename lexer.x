@@ -83,10 +83,10 @@ tokens :-
 
 -------------------- LITERALS --------------------------
 
-    \-?$digit+\.$digit+                     { \p s -> DoubleLit p (read s) }
-    \-?$digit+                              { \p s -> IntLit p (read s) }
+    $digit+\.$digit+                        { \p s -> DoubleLit p (read s) }
+    $digit+                                 { \p s -> IntLit p (read s) }
     ("true" | "false")                      { \p s -> BoolLit p (boolVal s) }
-    \"[^\"]*\"                              { \p s -> StringLit p s }
+    \"[^\"]*\"                              { \p s -> StringLit p (extractString s) }
 
 -------------------------- MAIN ------------------------------------
     $white+                                 ;
@@ -164,7 +164,7 @@ data Token =
     Or AlexPosn |
 -- LITERALS  -------------------------------------------
     DoubleLit AlexPosn Double |
-    IntLit AlexPosn Integer |
+    IntLit AlexPosn Int |
     BoolLit AlexPosn Bool |
     StringLit AlexPosn String |
 -- MAIN  ---------------------------------------------
@@ -186,6 +186,7 @@ data Token =
 boolVal "true" = True
 boolVal "false" = False
 
+extractString s = (drop 1 (take ((length s)-1) s)) 
 
 getTokens fn = unsafePerformIO (getTokensAux fn)
 
