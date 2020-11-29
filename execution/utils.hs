@@ -18,6 +18,12 @@ getBoolValue (BoolType x) = x
 getBoolValue _ = undefined
 
 
+getStringValue :: Type -> String
+getStringValue (StringType s) = s
+getStringValue _ = undefined
+
+
+
 getLiteralType :: Token -> Type
 getLiteralType (IntLit _ x) = (IntType x)
 getLiteralType (DoubleLit _ x) = (DoubleType x)

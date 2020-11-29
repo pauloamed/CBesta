@@ -240,8 +240,8 @@ funcallOpParser = (do   leftParen <- leftParenToken
 
 -- <command_with_ret> -> <alloc> | <addr> | <len> | <cast> | <substr>
 commandWithRetParser :: ParsecT [Token] OurState IO(Type, [Token])
-commandWithRetParser = (do  x <- subStrParser <|> castParser
--- <|> addrParser <|> lenParser <|> allocParser
+commandWithRetParser = (do  x <- subStrParser <|> castParser <|> lenParser
+-- <|> addrParser  <|> allocParser
                             return x)
 
 
@@ -275,12 +275,14 @@ addrParser = ( do addr <- addrToken
 
 
 -- <len> -> LEN LEFT_PAREN <id> RIGHT_PAREN
-lenParser :: ParsecT [Token] OurState IO([Token])
+lenParser :: ParsecT [Token] OurState IO(Type, [Token])
 lenParser = ( do  len <- lenToken
                   leftParen <- leftParenToken
-                  idd <- idParser
+                  (exprVal, expr) <- exprParser
                   rightParen <- rightParenToken
-                  return (len:leftParen:idd ++ [rightParen]))
+
+                  s <- getState
+                  return (getLen exprVal, len:leftParen:expr ++ [rightParen]))
 
 
 --  subst(string, ini, excl)

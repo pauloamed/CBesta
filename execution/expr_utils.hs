@@ -70,3 +70,9 @@ cast (BoolType x) (IntType _) = -- BOOL -> INT
     else do (IntType 0)
 
 cast _ _ = undefined
+
+
+getLen :: Type -> Type
+getLen (StringType x) = (IntType (length x))
+getLen (ArrayType (size, _)) = (IntType size)
+getLen _ = undefined
