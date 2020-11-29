@@ -33,8 +33,18 @@ declrsParser = (do  (semanType, typee) <- typeParser
 
                     (tailDeclr, tokens) <- remainingDeclrsParser semanType
 
+                    -- esse parser pode ser acessado como um statement ou como
+                    -- um struct. quando acessado, pode ser que a flag de execucao
+                    -- esteja desligada (struct, declaracao de funcao) ou ligada
+                    -- (execucao normal). quando a flag estiver desligada, nao iremos
+                    -- fazer o update das tabelas de memoria.
+                    -- em ambos os casos vamos retornar uma lista de (String, Type)
+                    -- a fim de poder usar esses valores na construcao de um struct
+
+                    -- pode ser que VAL == NULL: a variavel inicial nao foi inicializada
+
                     s <- getState
-                    if isExecOn s then do
+                    if isExecOn s then do -- checando se flag de execucao ta on
                       if val == NULL then do
                         updateState(memTable INSERT (getStringFromId idd, getScope s, semanType))
                         return (((getStringFromId idd, semanType):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
@@ -48,39 +58,21 @@ declrsParser = (do  (semanType, typee) <- typeParser
                         return (((getStringFromId idd, val):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens)))
 
 
-
+-- <declrs> -> {<declr> SEPARATOR}+
 multipleDeclrsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
 multipleDeclrsParser = (do  (hDeclrs, hTokens) <- declrsParser
                             x <- separatorToken
-                            (tDeclrs, tTokens) <- remainingSepDeclrsParser
+                            (tDeclrs, tTokens) <- multipleDeclrsParser <|> (return ([], []))
                             return (hDeclrs ++ tDeclrs, hTokens ++ x:tTokens))
 
-remainingSepDeclrsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
-remainingSepDeclrsParser = (do  (hDeclrs, hTokens) <- declrsParser
-                                x <- separatorToken
-                                (tDeclrs, tTokens) <- remainingSepDeclrsParser
-                                return (hDeclrs ++ tDeclrs, hTokens ++ x:tTokens)) <|>
-                            (return ([], []))
 
-{-
-Essa regra eh ID := <expr> OU ID
-Logo ela acaba retornando OU (String, XXX) OU (String, Val)
-Mas como representar Val? Dependendo do tipo esse valor varia...
-
-Solução A:
-  Passar valor de tipo ainda nao determinado : [Token]?
-
-Solução B:
-  Jogar essa regra pra regra de cima, onde a gnt ja tem acesso ao tipo desejado
-  E usar esse tipo ja em maos para definir o valor atribuido
-    Nested subprogram tem acesso ao escopo do pai?
--}
 -- <maybe_assigned_id> -> ID [<assign_expr>]
-
 remainingDeclrsParser :: Type -> ParsecT [Token] OurState IO([(String, Type)], [Token])
 remainingDeclrsParser typee = (do   comma <- commaToken
                                     idd <- idToken
                                     (val, maybeAssignExpr) <- assignExprParser <|> (return (NULL, []))
+
+                                    -- pode ser que VAL == NULL: a variavel nao foi inicializada
 
                                     (vals, tokens) <- remainingDeclrsParser typee
                                     s <- getState

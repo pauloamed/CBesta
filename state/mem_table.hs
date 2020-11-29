@@ -1,30 +1,48 @@
 module MemTable where
 
 import OurState
-
+import OurType
 
 import Control.Monad.IO.Class
 
 
-memTable :: Operation -> VarParam -> OurState -> OurState
-memTable INSERT x (l, f, p, t, sp, e) = (insertMemTable x l, f, p, t, sp, e)
-memTable REMOVE x (l, f, p, t, sp, e) = (removeMemTable x l, f, p, t, sp, e)
-memTable UPDATE x (l, f, p, t, sp, e) = (updateMemTable x l, f, p, t, sp, e)
+--------------------------------------------------------------------------------
+----------------------------------  SCOPE   ------------------------------------
+--------------------------------------------------------------------------------
 
 
-getVarFromState :: VarParam -> OurState -> Type
-getVarFromState x (l, _, _, _, _, _) = (getVarMemTable x l)
+addToScope :: String -> OurState -> OurState
+addToScope x (v, f, p, tl, sp, e) = (v, f, p, tl, x ++ "/" ++ sp, e)
+
+removeFromScope :: OurState -> OurState
+removeFromScope (v, f, p, tl, sp, e) = (v, f, p, tl, removeScopeHead sp, e)
+
+getScope :: OurState -> String
+getScope (_, _, _, _, sp, _) = sp
 
 
--- esq: ta na lista
--- dir: eh oq to pesquisando
--- da true sse esq eh sufixo do da direita
+removeScopeHead :: String -> String
+removeScopeHead "$" = "$"
+removeScopeHead ('/' : x) = x
+removeScopeHead (a : x) = removeScopeHead x
+
+
 shareScope :: String -> String -> Bool
 shareScope "" _ = True
 shareScope _ "" = False
 shareScope s (hx:tx) =
         if s == (hx:tx) then True
         else shareScope s tx
+
+
+--------------------------------------------------------------------------------
+----------------------------------  GETTER   -----------------------------------
+--------------------------------------------------------------------------------
+
+
+getVarFromState :: VarParam -> OurState -> Type
+getVarFromState x (l, _, _, _, _, _) = (getVarMemTable x l)
+
 
 
 getVarMemTable :: VarParam -> [Var] -> Type
@@ -34,6 +52,17 @@ getVarMemTable (idA, spA, x) ((idB, spB, headB : tailB):tailVars) =
                     if (shareScope spB spA) then headB
                     else getVarMemTable (idA, spA, x) tailVars
                   else getVarMemTable (idA, spA, x) tailVars
+
+
+--------------------------------------------------------------------------------
+----------------------------------  SETTER   -----------------------------------
+--------------------------------------------------------------------------------
+
+
+memTable :: Operation -> VarParam -> OurState -> OurState
+memTable INSERT x (l, f, p, t, sp, e) = (insertMemTable x l, f, p, t, sp, e)
+memTable REMOVE x (l, f, p, t, sp, e) = (removeMemTable x l, f, p, t, sp, e)
+memTable UPDATE x (l, f, p, t, sp, e) = (updateMemTable x l, f, p, t, sp, e)
 
 
 insertMemTable :: VarParam -> [Var] -> [Var]

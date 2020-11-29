@@ -7,6 +7,9 @@ import OperatorsPrimTokens
 
 import OurState
 
+
+-- parsers auxs de operacoes para cada nivel de expressao
+
 expr6OpParser :: ParsecT [Token] OurState IO (Token)
 expr6OpParser = try equalsToken <|> differenceToken
 

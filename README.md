@@ -50,3 +50,7 @@ na linha 13 de `parser.hs`
 -- substr
 --- dar erro ou retornar vazia qnd intervs invalidos sao passados?
 - organizar codigo (29.11)
+- getStringFromId
+-- hj em dia trata token, mas vai ter que tratar Parser (indexacao)
+-- botar um get scope no parser do id tbm?
+- sair do escopo, limpar as variaveis

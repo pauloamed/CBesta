@@ -64,7 +64,6 @@ typeParser = (do  simpleType <- intToken <|> boolToken <|> doubleToken <|> strin
 -----------------------------------------------------------------------------------------------
 
 
-
 -- <id> -> ID [<index>]
 idParser :: ParsecT [Token] OurState IO([Token])
 idParser = (do  idd <- idToken
@@ -98,6 +97,7 @@ remainingExprParserRight (ruleParser, opParser, x) = (do  op <- opParser
                                                           y <- ruleParser -- retorna lista de tokens e futuramente um Type
                                                           result <- remainingExprParserRight (ruleParser, opParser, y)
                                                           return (eval x op y)) <|> (return x)
+
 
 -- <expr> -> <expr_7> <remaining_expr>(<expr7>, OR)
 exprParser :: ParsecT [Token] OurState IO (Type, [Token])
@@ -193,7 +193,7 @@ valueIdParser = (do   idd <- idToken
                       return (getVarFromState (getStringFromId idd, getScope s, NULL) s,(idd:funcallOpOrIndexOp)))
 
 
--- <index_op> -> LEFT_BRACKET <expr> RIGHT_BRACKET [<index>]
+-- <index_op> -> LEFT_BRACKET <expr> RIGHT_BRACKET [<index_op>]
 indexOpParser :: ParsecT [Token] OurState IO([Token])
 indexOpParser = (do   leftBracket <- leftBracketToken
                       (_, expr) <- exprParser

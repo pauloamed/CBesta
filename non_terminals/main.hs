@@ -42,8 +42,8 @@ importParser :: ParsecT [Token] OurState IO([Token])
 importParser = (do  hashtag <- hashtagToken
                     importt <- importToken
                     fileName <- stringLitToken
-                    sep <- many separatorToken
-                    return (hashtag:importt:[fileName]))
+                    sep <- separatorToken
+                    return (hashtag:importt:fileName:[sep]))
 
 
 --------------------------------------------------------------------------------------------------------------
@@ -62,9 +62,11 @@ blockParser :: ParsecT [Token] OurState IO([Token])
 blockParser = (do   stmt <- stmtParser
                     sep <- separatorToken
                     return (stmt ++ [sep])) <|>
-              (do   updateState (addToScope "")
+              (do   compoundStmt <- controlStructureParser <|> subprogramsParser <|> structParser
+                    return (compoundStmt)) <|>
+              (do   updateState (addToScope "") -- entrando num novo escopo
                     enclosedBlocks <- enclosedBlocksParser
-                    updateState removeFromScope
+                    updateState removeFromScope -- saindo do escopo criado
                     return enclosedBlocks)
 
 
@@ -81,11 +83,11 @@ enclosedBlocksParser = (do  leftBrace <- leftBraceToken
 --------------------------------------------------------------------------------------------------------------
 
 
--- <stmt> -> CONTINUE | BREAK | <return> | <void_command> | <compound_stmt> | <declrs> | <deref_pointer> <assignments_op> | <stmt_id>
+-- <stmt> -> CONTINUE | BREAK | <return> | <void_command> | <declrs> | <deref_pointer> <assignments_op> | <stmt_id>
 stmtParser :: ParsecT [Token] OurState IO([Token])
 stmtParser = (do  x <- continueToken <|> breakToken
                   return [x]) <|>
-             (do  x <- returnParser <|> voidCommandParser <|> compoundStmtParser <|> stmtIdParser
+             (do  x <- returnParser <|> voidCommandParser <|> stmtIdParser
                   return x) <|>
              (do  derefPointer <- derefPointerParser
                   assignmentsOp <- assignmentsOpParser derefPointer
@@ -104,18 +106,10 @@ stmtIdParser = (do  idd <- idToken
                     return (idd:assignmentOrFuncall))
 
 
-
-
-
--- <compound_stmt> -> <control_structures> | <subprograms> | <struct>
-compoundStmtParser :: ParsecT [Token] OurState IO([Token])
-compoundStmtParser = (do  x <- controlStructureParser <|> subprogramsParser <|> structParser
-                          return (x))
-
-
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
+
 
 -- <struct> -> STRUCT TYPE_ID LEFT_BRACE { <declrs> }+ RIGHT_BRACE
 structParser :: ParsecT [Token] OurState IO([Token])
@@ -123,6 +117,10 @@ structParser = (do  struct <- structToken
                     idd <- typeIdToken
                     leftBrace <- leftBraceToken
                     s <- getState
+                    -- se exec tiver on, vou desliga-lo pra processar as declrs
+                    -- e liga-lo novamente. entao, insiro a struct criada na tabela
+                    -- de tipos. se exec tiver off (vai estar off? kk) so processo os
+                    -- tokens
                     if (isExecOn s) then do
                       updateState turnExecOff
                       (declrs, declrsTokens) <- multipleDeclrsParser
@@ -133,9 +131,7 @@ structParser = (do  struct <- structToken
                     else do
                       (declrs, declrsTokens) <- multipleDeclrsParser
                       rightBrace <- rightBraceToken
-                      updateState (typesTable INSERT (StructType (getStringFromId idd, declrs)))
                       return (struct:idd:leftBrace:declrsTokens ++ [rightBrace]))
-
 
 
 --------------------------------------------------------------------------------------------------------------
@@ -221,22 +217,6 @@ forParser =   (do   for <- forToken
                     enclosedBlock <- enclosedBlocksParser
                     return (for:leftParen:maybeVarBinding1 ++ semicolon:maybeExpr ++ semicolon:maybeVarBinding2 ++ rightParen:enclosedBlock))
 
-
-{-
-O problema: O IF pode ter um ELSE
-
-Se a flag de execução estiver ativada
-  Ou o IF ou o ELSE serao executados
-    Se a condicao do IF for verdadeira, os blocos devem ser executados
-    Caso contrario, os blocos do ELSE deverao ser executados
-
-Se entrar no IF com exec OFF, nada acontece
-Se entrar no IF com exec ON,
-  OU O bloco do IF acontece
-  OU O bloco do ELSE acontece
-
-
--}
 
 -- <if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
 ifParser :: ParsecT [Token] OurState IO([Token])
