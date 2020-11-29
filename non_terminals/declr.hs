@@ -26,16 +26,41 @@ import Control.Monad.IO.Class
 
 
 -- <declrs> -> <type> <maybe_assigned_id>  { COMMA <maybe_assigned_id>}]
-declrsParser :: ParsecT [Token] OurState IO([Token])
+declrsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
 declrsParser = (do  (semanType, typee) <- typeParser
+                    idd <- idToken
+                    (val, maybeAssignExpr) <- assignExprParser <|> (return (NULL, []))
 
-                    assignedId <- maybeAssignedIdParser semanType
-                    maybeAssigns <- many (do  comma <- commaToken
-                                              maybeAssignedIds <- maybeAssignedIdParser semanType
-                                              return (comma:maybeAssignedIds))
-                    return ((typee ++ assignedId ++ concat(maybeAssigns))))
+                    (tailDeclr, tokens) <- remainingDeclrsParser semanType
+
+                    s <- getState
+                    if isExecOn s then do
+                      if val == NULL then do
+                        updateState(memTable INSERT (getStringFromId idd, getScope s, semanType))
+                        return (((getStringFromId idd, semanType):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
+                      else do
+                        updateState(memTable INSERT (getStringFromId idd, getScope s, val))
+                        return (((getStringFromId idd, val):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
+                    else do
+                      if val == NULL then do
+                        return (((getStringFromId idd, semanType):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
+                      else do
+                        return (((getStringFromId idd, val):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens)))
 
 
+
+multipleDeclrsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
+multipleDeclrsParser = (do  (hDeclrs, hTokens) <- declrsParser
+                            x <- separatorToken
+                            (tDeclrs, tTokens) <- remainingSepDeclrsParser
+                            return (hDeclrs ++ tDeclrs, hTokens ++ x:tTokens))
+
+remainingSepDeclrsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
+remainingSepDeclrsParser = (do  (hDeclrs, hTokens) <- declrsParser
+                                x <- separatorToken
+                                (tDeclrs, tTokens) <- remainingSepDeclrsParser
+                                return (hDeclrs ++ tDeclrs, hTokens ++ x:tTokens)) <|>
+                            (return ([], []))
 
 {-
 Essa regra eh ID := <expr> OU ID
@@ -51,13 +76,18 @@ Solução B:
     Nested subprogram tem acesso ao escopo do pai?
 -}
 -- <maybe_assigned_id> -> ID [<assign_expr>]
-maybeAssignedIdParser :: Type -> ParsecT [Token] OurState IO([Token])
-maybeAssignedIdParser typee = (do   idd <- idToken
-                                    (val, maybeAssignExpr) <- assignExprParser <|> (return (NULL, []))
-                                    s <- getState
-                                    if val == NULL then -- salvar na tabela com typee
-                                      updateState(memTable INSERT (getStringFromId idd, getScope s, typee))
-                                    else -- checar tipo e salvar na tabela usando val
-                                      updateState(memTable INSERT (getStringFromId idd, getScope s, val))
 
-                                    return ((idd:maybeAssignExpr)))
+remainingDeclrsParser :: Type -> ParsecT [Token] OurState IO([(String, Type)], [Token])
+remainingDeclrsParser typee = (do   comma <- commaToken
+                                    idd <- idToken
+                                    (val, maybeAssignExpr) <- assignExprParser <|> (return (NULL, []))
+
+                                    (vals, tokens) <- remainingDeclrsParser typee
+                                    s <- getState
+                                    if val == NULL then do
+                                      updateState(memTable INSERT (getStringFromId idd, getScope s, typee))
+                                      return ((getStringFromId idd, typee):vals, comma:idd:maybeAssignExpr ++ tokens)
+                                    else do
+                                      updateState(memTable INSERT (getStringFromId idd, getScope s, val))
+                                      return ((getStringFromId idd, val):vals, comma:idd:maybeAssignExpr ++ tokens)) <|>
+                              (return ([], []))

@@ -1,7 +1,5 @@
-Bool fa := true, fb := true;
-
-if(fa) then{
-  if(fa) then{
-    print(fa);
-  };
+struct Teste{
+  Int x := 10;
 };
+
+print(10);

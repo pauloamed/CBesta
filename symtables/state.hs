@@ -22,6 +22,7 @@ instance Show Type where
     show (DoubleType x) = show x
     show (BoolType x) = show x
     show (StringType x) = id x
+    show (StructType (x, (y:_))) = id (x ++ show y)
     show (NULL) = id ">>NULL<<"
     show _ = id ">>not implemented<<"
 

@@ -41,6 +41,7 @@ evalType _ _ _ = undefined
 
 getStringFromId :: Token -> String
 getStringFromId (Id _ x) = x
+getStringFromId (TypeId _ x) = x
 getStringFromId _ = undefined
 
 

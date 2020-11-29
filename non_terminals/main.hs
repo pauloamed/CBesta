@@ -85,11 +85,13 @@ enclosedBlocksParser = (do  leftBrace <- leftBraceToken
 stmtParser :: ParsecT [Token] OurState IO([Token])
 stmtParser = (do  x <- continueToken <|> breakToken
                   return [x]) <|>
-             (do  x <- returnParser <|> voidCommandParser <|> compoundStmtParser <|> declrsParser <|> stmtIdParser
+             (do  x <- returnParser <|> voidCommandParser <|> compoundStmtParser <|> stmtIdParser
                   return x) <|>
              (do  derefPointer <- derefPointerParser
                   assignmentsOp <- assignmentsOpParser derefPointer
-                  return (derefPointer ++ assignmentsOp))
+                  return (derefPointer ++ assignmentsOp)) <|>
+             (do  (_, declrs) <- declrsParser
+                  return (declrs))
 
 
 -- <stmt_id> -> ID ([<index_op>] <assignments_op> | <funcall_op>)
@@ -120,12 +122,20 @@ structParser :: ParsecT [Token] OurState IO([Token])
 structParser = (do  struct <- structToken
                     idd <- typeIdToken
                     leftBrace <- leftBraceToken
-                    -- updateState(typesTable INSERT (getStruct idd declrs))
-                    declrs <- many1 (do x <- declrsParser
-                                        y <- separatorToken
-                                        return (x ++ [y]))
-                    rightBrace <- rightBraceToken
-                    return (struct:idd:leftBrace:concat(declrs) ++ [rightBrace]))
+                    s <- getState
+                    if (isExecOn s) then do
+                      updateState turnExecOff
+                      (declrs, declrsTokens) <- multipleDeclrsParser
+                      updateState turnExecOn
+                      rightBrace <- rightBraceToken
+                      updateState (typesTable INSERT (StructType (getStringFromId idd, declrs)))
+                      return (struct:idd:leftBrace:declrsTokens ++ [rightBrace])
+                    else do
+                      (declrs, declrsTokens) <- multipleDeclrsParser
+                      rightBrace <- rightBraceToken
+                      updateState (typesTable INSERT (StructType (getStringFromId idd, declrs)))
+                      return (struct:idd:leftBrace:declrsTokens ++ [rightBrace]))
+
 
 
 --------------------------------------------------------------------------------------------------------------
@@ -194,13 +204,19 @@ whileParser =   (do   while <- whileToken
 forParser :: ParsecT [Token] OurState IO([Token])
 forParser =   (do   for <- forToken
                     leftParen <- leftParenToken
-                    maybeVarBinding1 <- assignmentsParser <|> declrsParser <|> (return [])
+                    maybeVarBinding1 <- (do   (_, declrs) <- declrsParser
+                                              return (declrs)) <|>
+                                              assignmentsParser <|>
+                                              (return [])
                     semicolon <- separatorToken
                     maybeExpr <- (do  (_, x) <- exprParser
                                       return x) <|>
                                 (return [])
                     semicolon <- separatorToken
-                    maybeVarBinding2 <- assignmentsParser <|> declrsParser <|> (return [])
+                    maybeVarBinding2 <- (do   (_, declrs) <- declrsParser
+                                              return (declrs)) <|>
+                                              assignmentsParser <|>
+                                              (return [])
                     rightParen <- rightParenToken
                     enclosedBlock <- enclosedBlocksParser
                     return (for:leftParen:maybeVarBinding1 ++ semicolon:maybeExpr ++ semicolon:maybeVarBinding2 ++ rightParen:enclosedBlock))
