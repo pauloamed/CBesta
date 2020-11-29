@@ -1,1 +1,0 @@
-print(substr("abc", 2, 0));

@@ -1,6 +1,7 @@
 module ExprExecUtils where
 
 import OurState
+import OurType
 
 import Lexer
 import Text.Parsec
@@ -49,3 +50,23 @@ evalType _ _ _ = undefined
 getSubstr :: Type -> Type -> Type -> Type
 getSubstr (IntType l) (IntType r) (StringType str) = (StringType (drop l (take r str)))
 getSubstr _ _ _ = undefined
+
+
+cast :: Type -> Type -> Type
+cast (IntType x) (IntType _) = (IntType x) -- padrao INT
+cast (BoolType x) (BoolType _) = (BoolType x) -- padrao BOOL
+cast (DoubleType x) (DoubleType _) = (DoubleType x) -- padrao DOUBLE
+cast (StringType x) (StringType _) = (StringType x) -- padrao STRING
+
+cast (IntType x) (DoubleType _) = (DoubleType ((fromIntegral x)*1.0)) -- INT -> DOUBLE
+cast (IntType x) (BoolType _) = -- INT -> BOOL
+          if (x == 0) then do (BoolType False)
+          else do (BoolType True)
+
+cast (DoubleType x) (IntType _) = (IntType (floor x)) -- DOUBLE -> INT
+
+cast (BoolType x) (IntType _) = -- BOOL -> INT
+    if x then do (IntType 1)
+    else do (IntType 0)
+
+cast _ _ = undefined

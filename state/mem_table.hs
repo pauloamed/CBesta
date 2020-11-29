@@ -41,17 +41,17 @@ shareScope s (hx:tx) =
 
 
 getVarFromState :: VarParam -> OurState -> Type
-getVarFromState x (l, _, _, _, _, _) = (getVarMemTable x l)
+getVarFromState x (l, _, _, _, _, _) = (getVarFromMemTable x l)
 
 
 
-getVarMemTable :: VarParam -> [Var] -> Type
-getVarMemTable (idA, spA, _) [] = (NULL)
-getVarMemTable (idA, spA, x) ((idB, spB, headB : tailB):tailVars) =
+getVarFromMemTable :: VarParam -> [Var] -> Type
+getVarFromMemTable (idA, spA, _) [] = (NULL)
+getVarFromMemTable (idA, spA, x) ((idB, spB, headB : tailB):tailVars) =
                   if (idA == idB) then
                     if (shareScope spB spA) then headB
-                    else getVarMemTable (idA, spA, x) tailVars
-                  else getVarMemTable (idA, spA, x) tailVars
+                    else getVarFromMemTable (idA, spA, x) tailVars
+                  else getVarFromMemTable (idA, spA, x) tailVars
 
 
 --------------------------------------------------------------------------------

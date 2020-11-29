@@ -45,7 +45,6 @@ tokens :-
     List                                    { \p s -> List p }
     Array                                   { \p s -> Array p }
     Hashmap                                 { \p s -> Hashmap p }
-    Tuple                                   { \p s -> Tuple p }
 
 ---------------------- SCOPES  -------------------------
 
@@ -186,7 +185,7 @@ data Token =
 boolVal "true" = True
 boolVal "false" = False
 
-extractString s = (drop 1 (take ((length s)-1) s)) 
+extractString s = (drop 1 (take ((length s)-1) s))
 
 getTokens fn = unsafePerformIO (getTokensAux fn)
 

@@ -14,9 +14,13 @@ import CommandsPrimTokens
 import MemTable
 import SubProgTable
 import TypesTable
-import OurState
 
-import ExecutionUtils
+import OurState
+import OurType
+
+import ExprExecUtils
+import BasicExecUtils
+
 import ExprTokenUtils
 
 import Control.Monad.IO.Class
@@ -27,13 +31,14 @@ type TokenParser = ParsecT [Token] OurState IO (Token)
 
 -- <type> -> POINTER <enclosed_type>
 --           | ARRAY LESS_THAN <expr> COMMA <type> GREATER_THAN
---           | TUPLE LESS_THAN <types> GREATER_THAN
 --           | INT | BOOL | DOUBLE | STRING
 --           | TYPE_ID
 typeParser :: ParsecT [Token] OurState IO (Type, [Token])
 typeParser = (do  simpleType <- intToken <|> boolToken <|> doubleToken <|> stringToken
-                  return (getSemanticType simpleType, [simpleType]))
-                  -- <|>
+                  return (getSemanticType simpleType, [simpleType])) <|>
+             (do  idd <- typeIdToken
+                  s <- getState
+                  return (getTypeFromState (getStringFromId idd) s, [idd]))
              --  (do  x <- pointerToken
              --      lessThan <- lessThanToken
              --      typee <- typeParser
@@ -46,17 +51,6 @@ typeParser = (do  simpleType <- intToken <|> boolToken <|> doubleToken <|> strin
              --      typee <- typeParser
              --      greaterThan <- greaterThanToken
              --      return (array:lessThan:typee ++ comma:size ++ [greaterThan])) <|>
-             -- (do  tuple <- tupleToken
-             --      lessThan <- lessThanToken
-             --      typee <- typeParser
-             --      remaining <- many1 (do   comma <- commaToken
-             --                               typee <- typeParser
-             --                               return (comma:typee))
-             --      greaterThan <- greaterThanToken
-             --      return (tuple:lessThan:typee ++ concat(remaining) ++ [greaterThan])) <|>
-             -- (do  idd <- typeIdToken
-             -- -- ta na tabela? se n tiver, da erro
-             --      return ([idd]))
 
 
 -----------------------------------------------------------------------------------------------
@@ -246,20 +240,20 @@ funcallOpParser = (do   leftParen <- leftParenToken
 
 -- <command_with_ret> -> <alloc> | <addr> | <len> | <cast> | <substr>
 commandWithRetParser :: ParsecT [Token] OurState IO(Type, [Token])
-commandWithRetParser = (do  x <- subStrParser
--- <|> addrParser <|> lenParser <|> castParser <|> allocParser
+commandWithRetParser = (do  x <- subStrParser <|> castParser
+-- <|> addrParser <|> lenParser <|> allocParser
                             return x)
 
 
 -- <cast> -> CAST LEFT_PAREN <expr> COMMA <type> RIGHT_PAREN
-castParser :: ParsecT [Token] OurState IO([Token])
-castParser = (do  cast <- castToken
+castParser :: ParsecT [Token] OurState IO(Type, [Token])
+castParser = (do  castT <- castToken
                   lp <- leftParenToken
-                  (_, expr) <- exprParser
+                  (exprVal, expr) <- exprParser
                   c <- commaToken
-                  (_, t) <- typeParser
+                  (semanType, t) <- typeParser
                   rp <- rightParenToken
-                  return (cast:lp:expr ++ c:t ++ [rp]))
+                  return (cast exprVal semanType , castT:lp:expr ++ c:t ++ [rp]))
 
 
 -- <alloc> -> ALLOC <type>

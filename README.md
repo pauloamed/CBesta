@@ -40,16 +40,13 @@ na linha 13 de `parser.hs`
 -- como funciona o ponteiro para array e seus elementos?
 - array
 -- acesso/controle dos elementos
-- tupla
--- acesso/controle dos elementos (29.11)
 - ret commands
--- cast (29.11)
 -- alloc
--- addr (29.11)
+-- addr (30.11)
+--- criar uma struct padrao (ok?) pra armazenar o retorno de addr (endereco: id, escopo)
 -- len
 -- substr
 --- dar erro ou retornar vazia qnd intervs invalidos sao passados?
-- organizar codigo (29.11)
 - getStringFromId
 -- hj em dia trata token, mas vai ter que tratar Parser (indexacao)
 -- botar um get scope no parser do id tbm?

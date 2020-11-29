@@ -18,9 +18,11 @@ import ExprGrammar
 import MemTable
 import SubProgTable
 import TypesTable
-import OurState
 
-import ExecutionUtils
+import OurState
+import OurType
+
+import BasicExecUtils
 
 import Control.Monad.IO.Class
 

@@ -19,9 +19,11 @@ import SubProgGrammar
 import MemTable
 import SubProgTable
 import TypesTable
-import OurState
 
-import ExecutionUtils
+import OurState
+import OurType
+
+import BasicExecUtils
 
 
 --------------------------------------------------------------------------------------------------------------

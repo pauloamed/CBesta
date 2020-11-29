@@ -12,8 +12,7 @@ data Type =
     StringType String |
     StructType (String, [(String, Type)]) | -- nome seguido de uma lista de nomes e Types (tipo + valor) |
     PointerType (Type, (String, String)) |
-    ArrayType (Int, [Type]) | -- tamanho, lista com variaveis/valores, escopo e nome. como garantir consistencia de tipo?
-    TupleType (Int, [Type]) -- lista de vars, escopo e nome
+    ArrayType (Int, [Type]) -- tamanho, lista com variaveis/valores, escopo e nome. como garantir consistencia de tipo?
     deriving (Eq)
     -- deriving (Eq, Show)
 

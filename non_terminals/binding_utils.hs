@@ -11,13 +11,14 @@ import ScopesPrimTokens
 import TypesPrimTokens
 import CommandsPrimTokens
 
-
 import ExprGrammar
 
 import MemTable
 import SubProgTable
 import TypesTable
+
 import OurState
+import OurType
 
 
 -- <assign_expr> -> ASSIGN <expr>

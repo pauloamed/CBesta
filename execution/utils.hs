@@ -1,6 +1,7 @@
 module BasicExecUtils where
 
 import OurState
+import OurType
 
 import Lexer
 import Text.Parsec
