@@ -1,0 +1,11 @@
+struct Testa{
+  Int x := 100;
+}
+
+struct Teste{
+  Testa y;
+}
+
+Array<10, Teste> teste;
+
+print(teste[0].y.x);

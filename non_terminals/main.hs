@@ -100,8 +100,8 @@ stmtParser = (do  x <- continueToken <|> breakToken
 
 -- <stmt_id> -> ID ([<index_op>] <assignments_op> | <funcall_op>)
 stmtIdParser :: ParsecT [Token] OurState IO([Token])
-stmtIdParser = (do  idd <- idToken
-                    assignmentOrFuncall <- (do  maybeIndex <- indexOpParser <|> (return [])
+stmtIdParser = (do  idd <- idToken -- aqui eh escrita
+                    assignmentOrFuncall <- (do  maybeIndex <- (return []) -- TODO
                                                 assignment <- assignmentsOpParser (idd:maybeIndex)
                                                 return (maybeIndex ++ assignment)) <|>
                                             funcallOpParser
@@ -163,7 +163,7 @@ subprogramsParser = (do   x <- funcParser <|> procParser
 funcParser :: ParsecT [Token] OurState IO([Token])
 funcParser =  (do   func <- funcToken
                     (semanType, typee) <- typeParser
-                    idd <- idToken
+                    idd <- idToken -- aqui eh token mesmo
                     leftParen <- leftParenToken
                     (argsSeman, args) <- argsParser
                     rightParen <- rightParenToken
@@ -177,7 +177,7 @@ funcParser =  (do   func <- funcToken
 -- <proc> -> PROC ID <enclosed_args> <enclosed_blocks>
 procParser :: ParsecT [Token] OurState IO([Token])
 procParser =  (do   procc <- procToken
-                    idd <- idToken
+                    idd <- idToken -- aqui eh token mesmo
                     leftParen <- leftParenToken
                     (argsSeman, args) <- argsParser
                     rightParen <- rightParenToken

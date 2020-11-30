@@ -57,11 +57,10 @@ typeParser = (do  simpleTypeToken <- intToken <|> boolToken <|> doubleToken <|> 
 -----------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------
 
-
 -- <id> -> ID [<index>]
 idParser :: ParsecT [Token] OurState IO([Token])
 idParser = (do  idd <- idToken
-                maybeAccess <- indexOpParser <|> (return [])
+                maybeAccess <- (return []) -- TODO
                 return (idd:maybeAccess))
 
 
@@ -176,24 +175,40 @@ literalParser = (do   x <- intLitToken <|> boolLitToken <|> doubleLitToken <|> s
 --------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------
 
+-- id()
+-- id[0].x[3].y
 
 -- <value_id> -> ID [(<index_op> | <funcall>)]
 valueIdParser :: ParsecT [Token] OurState IO(Type, [Token])
 valueIdParser = (do   idd <- idToken
-                      -- funcallOpOrIndexOp <- funcallOpParser <|> indexOpParser <|> (return [])
-                      funcallOpOrIndexOp <- (return [])
+                      (flag, modifiers, funcallOpOrIndexOp) <- (do  x <- funcallOpParser
+                                                                    return ("funcall", [], x)) <|>
+                                                               (do  (modifiers, tokens) <- accessModifierOpParser
+                                                                    return ("access", modifiers, tokens)) <|>
+                                                               (return ("", [], []))
+
                       s <- getState
+                      if (flag == "funcall") then do
+                        return (NULL, (idd:funcallOpOrIndexOp))
+                      else do
+                        return (getValFromValAndModifiers (getValFromState (getStringFromId idd, getScope s, NULL) s) modifiers,
+                                  (idd:funcallOpOrIndexOp)))
 
-                      return (getValFromState (getStringFromId idd, getScope s, NULL) s,(idd:funcallOpOrIndexOp)))
 
+-- <access_modf_op> -> (LEFT_BRACKET <expr> RIGHT_BRACKET | DOT id) <access_modf_op> | NULL
+accessModifierOpParser :: ParsecT [Token] OurState IO([AccessModifier], [Token])
+accessModifierOpParser = (do  leftBracket <- leftBracketToken
+                              (valExpr, tokensExpr) <- exprParser
+                              rightBracket <- rightBracketToken
+                              (modifiers, tokensRemaining) <- accessModifierOpParser
 
--- <index_op> -> LEFT_BRACKET <expr> RIGHT_BRACKET [<index_op>]
-indexOpParser :: ParsecT [Token] OurState IO([Token])
-indexOpParser = (do   leftBracket <- leftBracketToken
-                      (_, expr) <- exprParser
-                      rightBracket <- rightBracketToken
-                      remaining <- indexOpParser <|> (return [])
-                      return (leftBracket:expr ++ rightBracket:remaining))
+                              return (((ArrayAM (getIntFromType valExpr)):modifiers), leftBracket:tokensExpr ++ rightBracket:tokensRemaining)) <|>
+                         (do  dot <- dotToken
+                              idd <- idToken
+                              (modifiers, tokensRemaining) <- accessModifierOpParser
+
+                              return (((StructAM (getStringFromId idd)):modifiers), dot:[idd])) <|>
+                         (return ([],[]))
 
 
 --------------------------------------------------------------------------------------------
@@ -217,7 +232,7 @@ derefPointerParser = (do  star <- starToken
 
 -- <funcall> -> ID <funcall_op>
 funcallParser :: ParsecT [Token] OurState IO([Token])
-funcallParser = (do   idd <- idToken
+funcallParser = (do   idd <- idToken -- aqui eh token mesmo
                       funcallOp <- funcallOpParser
                       return (idd:funcallOp))
 

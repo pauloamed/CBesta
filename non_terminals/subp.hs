@@ -35,7 +35,7 @@ returnParser = (do  ret <- returnToken
 -- <args> -> <type> ID { COMMA <type> ID } | LAMBDA
 argsParser :: ParsecT [Token] OurState IO([Type], [Token])
 argsParser = (do  (semanType, tokenType) <- typeParser
-                  idd <- idToken
+                  idd <- idToken -- aqui eh token mesmo
                   (remainingArgsSeman, remainingArgsTokens) <- remainingArgsParser
                   return ((semanType:remainingArgsSeman, tokenType ++ idd:remainingArgsTokens))) <|>
               (return ([], []))
@@ -44,7 +44,7 @@ argsParser = (do  (semanType, tokenType) <- typeParser
 remainingArgsParser :: ParsecT [Token] OurState IO([Type], [Token])
 remainingArgsParser = (do   comma <- commaToken
                             (semanType, tokenType) <- typeParser
-                            idd <- idToken
+                            idd <- idToken -- aqui eh token mesmo
                             (tailSemanTypes, tailTokenTypes) <- remainingArgsParser
                             return ((semanType:tailSemanTypes), comma:tokenType ++ idd:tailTokenTypes)) <|>
                       (return ([], []))

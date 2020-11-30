@@ -30,7 +30,7 @@ import Control.Monad.IO.Class
 -- <declrs> -> <type> <maybe_assigned_id>  { COMMA <maybe_assigned_id>}]
 declrsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
 declrsParser = (do  (semanType, typee) <- typeParser
-                    idd <- idToken
+                    idd <- idToken -- aqui eh tokens mesmo
                     (val, maybeAssignExpr) <- assignExprParser <|> (return (NULL, []))
 
                     (tailDeclr, tokens) <- remainingDeclrsParser semanType
@@ -71,7 +71,7 @@ multipleDeclrsParser = (do  (hDeclrs, hTokens) <- declrsParser
 -- <maybe_assigned_id> -> ID [<assign_expr>]
 remainingDeclrsParser :: Type -> ParsecT [Token] OurState IO([(String, Type)], [Token])
 remainingDeclrsParser typee = (do   comma <- commaToken
-                                    idd <- idToken
+                                    idd <- idToken -- aqui eh token mesmo
                                     (val, maybeAssignExpr) <- assignExprParser <|> (return (NULL, []))
 
                                     -- pode ser que VAL == NULL: a variavel nao foi inicializada

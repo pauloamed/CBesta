@@ -26,3 +26,8 @@ instance Show Type where
     show (PointerType (x, (idd, sp))) = id ("Pointer : " ++ (show x) ++ " : (" ++ (show idd) ++ ", " ++ (show sp) ++ ")")
     show (NULL) = id ">>NULL<<"
     show _ = id ">>not implemented<<"
+
+
+data AccessModifier =
+    StructAM String |
+    ArrayAM Int
