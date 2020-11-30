@@ -37,8 +37,12 @@ voidCommandParser = (do   x <- freeParser <|> printParser <|> readParser
 -- <free> -> FREE (<id> | <deref_pointer>)
 freeParser :: ParsecT [Token] OurState IO([Token])
 freeParser = (do  free <- freeToken
-                  val <- idParser <|> derefPointerParser
-                  return (free:val))
+                  (exprVal, exprTokens) <- exprParser
+                  -- exprVal tem que ser do tipo PointerType(tipo, id, escopo)
+                  -- se nao for da merda...
+                  -- remover (id, escopo) de memtable
+                  updateState(memTable REMOVE (getAddrFromPointer exprVal))
+                  return (free:exprTokens))
 
 
 -- <print> -> PRINT LEFT_PAREN <expr> RIGHT_PAREN
@@ -50,6 +54,7 @@ printParser = (do printt <- printToken
 
                   s <- getState
                   liftIO (print s)
+                  liftIO (print "")
 
                   if isExecOn s then liftIO (print val)
                   else pure ()
@@ -67,6 +72,6 @@ readParser = (do  readd <- readToken
                   readVal <- liftIO (getLine)
                   s <- getState
 
-                  updateState(memTable UPDATE (getStringFromId idd, getScope s, convertStringToType readVal (getVarFromState (getStringFromId idd, getScope s, NULL) s)))
+                  updateState(memTable UPDATE (getStringFromId idd, getScope s, convertStringToType readVal (getValFromState (getStringFromId idd, getScope s, NULL) s)))
 
                   return (readd:leftParen:val ++ [rightParen]))

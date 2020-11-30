@@ -16,7 +16,7 @@ type Func = (String, Type, [Type], [Token])
 type Proc = (String, [Type], [Token])
 
 -- Memoria, Funcoes, Procedimentos, Tipos e EM_EXEC
-type OurState = ([Var], [Func], [Proc], [Type], String, Bool)
+type OurState = (([Var], Int), [Func], [Proc], [Type], String, Bool)
 
 
 

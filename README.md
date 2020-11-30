@@ -38,16 +38,7 @@ na linha 13 de `parser.hs`
 -- funcao recursiva para simular iteracao
 - struct
 -- como usar uma struct ja declarada?
-- void commands
--- read -- OK
--- free -- OK
-- pointer -- OK
-- array -- OK
 -- acesso/controle dos elementos
-- ret commands
--- alloc (30.11) -- OK
--- addr (30.11) -- OK
--- len
 - getStringFromId
 -- hj em dia trata token, mas vai ter que tratar Parser (indexacao)
 -- botar um get scope no parser do id tbm?
@@ -64,3 +55,13 @@ na linha 13 de `parser.hs`
 --- dar erro ou retornar vazia qnd intervs invalidos sao passados?
 -- compatibilidade de tipos
 --- tamanho de array tem q ser int
+
+
+- restringir o free pra desalocar somente as variaveis alcoaadas na heap?
+-- melhorar isso de pesqusia por escopo
+
+-- deref pointer: estrela de estrela
+
+*****id
+id[][][][][]
+id.id.id.id

@@ -184,7 +184,7 @@ valueIdParser = (do   idd <- idToken
                       funcallOpOrIndexOp <- (return [])
                       s <- getState
 
-                      return (getVarFromState (getStringFromId idd, getScope s, NULL) s,(idd:funcallOpOrIndexOp)))
+                      return (getValFromState (getStringFromId idd, getScope s, NULL) s,(idd:funcallOpOrIndexOp)))
 
 
 -- <index_op> -> LEFT_BRACKET <expr> RIGHT_BRACKET [<index_op>]
@@ -204,8 +204,10 @@ indexOpParser = (do   leftBracket <- leftBracketToken
 -- <deref_pointer> -> STAR <id>
 derefPointerParser :: ParsecT [Token] OurState IO([Token])
 derefPointerParser = (do  star <- starToken
-                          idd <- idParser
-                          return (star:idd))
+                          (idd:x) <- idParser
+                          -- id parser eh um ponteiro
+                          -- quero olhar o valor
+                          return (star:(idd:x)))
 
 
 --------------------------------------------------------------------------------------------
@@ -240,8 +242,7 @@ funcallOpParser = (do   leftParen <- leftParenToken
 
 -- <command_with_ret> -> <alloc> | <addr> | <len> | <cast> | <substr>
 commandWithRetParser :: ParsecT [Token] OurState IO(Type, [Token])
-commandWithRetParser = (do  x <- subStrParser <|> castParser <|> lenParser
--- <|> addrParser  <|> allocParser
+commandWithRetParser = (do  x <- subStrParser <|> castParser <|> lenParser <|> allocParser <|> addrParser
                             return x)
 
 
@@ -257,21 +258,28 @@ castParser = (do  castT <- castToken
 
 
 -- <alloc> -> ALLOC <type>
-allocParser :: ParsecT [Token] OurState IO([Token])
+allocParser :: ParsecT [Token] OurState IO(Type, [Token])
 allocParser = (do   alloc <- allocToken
                     lp <- leftParenToken
-                    (_, typee) <- typeParser
+                    (semanType, tokenType) <- typeParser
                     rp <- rightParenToken
-                    return (alloc:lp:typee ++ [rp]))
+
+                    s <- getState
+                    updateState (memTable INSERT ("", "heap", semanType))
+
+                    return (getAlloc s semanType, alloc:lp:tokenType ++ [rp]))
 
 
 -- <addr> -> ADDR LEFT_PAREN <id> RIGHT_PAREN
-addrParser :: ParsecT [Token] OurState IO([Token])
+addrParser :: ParsecT [Token] OurState IO(Type, [Token])
 addrParser = ( do addr <- addrToken
                   leftParen <- leftParenToken
-                  idd <- idParser
+                  (idd:x) <- idParser
                   rightParen <- rightParenToken
-                  return (addr:leftParen:idd ++ [rightParen]))
+
+                  s <- getState
+
+                  return (getAddrFromIdFromState (getStringFromId idd) s, addr:leftParen:(idd:x) ++ [rightParen]))
 
 
 -- <len> -> LEN LEFT_PAREN <id> RIGHT_PAREN

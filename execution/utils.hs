@@ -23,6 +23,11 @@ getStringValue (StringType s) = s
 getStringValue _ = undefined
 
 
+getAddrFromPointer :: Type -> VarParam
+getAddrFromPointer (PointerType (_, (idd, sp))) = (idd, sp, NULL)
+getAddrFromPointer _ = undefined
+
+
 convertStringToType :: String -> Type -> Type
 convertStringToType x (IntType _) = (IntType (read x))
 convertStringToType x (DoubleType _) = (DoubleType (read x))
