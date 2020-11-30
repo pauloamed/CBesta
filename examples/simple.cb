@@ -1,0 +1,3 @@
+Double x;
+read(x);
+print(x);

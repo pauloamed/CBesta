@@ -15,13 +15,16 @@ import Control.Monad.IO.Class
 
 -- import System.IO.Unsafe
 
+import BasicExecUtils
 
 import ExprGrammar
 
 import MemTable
 import SubProgTable
 import TypesTable
+
 import OurState
+import OurType
 
 
 
@@ -58,6 +61,12 @@ printParser = (do printt <- printToken
 readParser :: ParsecT [Token] OurState IO([Token])
 readParser = (do  readd <- readToken
                   leftParen <- leftParenToken
-                  val <- idParser <|> derefPointerParser
+                  (idd:val) <- idParser <|> derefPointerParser -- TODO
                   rightParen <- rightParenToken
+
+                  readVal <- liftIO (getLine)
+                  s <- getState
+
+                  updateState(memTable UPDATE (getStringFromId idd, getScope s, convertStringToType readVal (getVarFromState (getStringFromId idd, getScope s, NULL) s)))
+
                   return (readd:leftParen:val ++ [rightParen]))

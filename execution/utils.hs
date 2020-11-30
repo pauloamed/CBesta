@@ -23,6 +23,17 @@ getStringValue (StringType s) = s
 getStringValue _ = undefined
 
 
+convertStringToType :: String -> Type -> Type
+convertStringToType x (IntType _) = (IntType (read x))
+convertStringToType x (DoubleType _) = (DoubleType (read x))
+convertStringToType x (BoolType _) =
+      if (x == "true") then (BoolType True)
+      else do
+        if (x == "false") then (BoolType False)
+        else undefined
+convertStringToType x (StringType _) = (StringType x)
+convertStringToType _ _  = undefined
+
 
 getLiteralType :: Token -> Type
 getLiteralType (IntLit _ x) = (IntType x)
