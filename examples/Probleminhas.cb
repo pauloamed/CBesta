@@ -1,0 +1,77 @@
+// imports
+#import "xxx";
+#import "biblioteca";
+
+
+struct rational_t {
+    Int numerador, denominador;
+}
+
+
+// Problema 1
+proc prob1(Double x, Double y, Int c) {
+    Double res := x*x - y + c;
+    print(res);
+}
+
+// Problema 4.1 (sei n ;--;)
+func rational_t prob41(Int a, Int b) {
+    rational_t fracao = new rational_t;
+    fracao.numerador := a;
+    fracao.denominador := b;
+    
+    return fracao;
+}
+
+// Problema 4.2
+func bool prob42(rational_t a, rational_t b) {
+    Double x,y;
+    x := a.numerador/a.denominador;
+    y := b.numerador/b.denominador;
+    
+    return x == y;
+}
+
+// Problema 4.3
+proc prob43(rational_t a, rational_t b) {
+
+    // Realiza os outros subprogramas
+    frac_soma := prob4_soma(a,b);
+    frac_sub := prob4_sub(a,b);
+    frac_mult := prob4_mult(a,b);
+    frac_div := prob4_div(a,b);
+    
+    print(frac_soma);
+    print(frac_sub);
+    print(frac_mult);
+    print(frac_div);
+}
+
+// corpo main do programa
+func Int main() {
+    Double x:=1.30,y:=1.1001;
+    Int c:=2;
+
+    print("Executando os problemas definidos");
+    
+    // Problema 1
+    print("Resultado 1");
+    prob1(x,y,c);
+    
+    // Problema 2
+    
+    // Problema 3
+    
+    // Problema 4
+    Int a:=35,b:=7;
+    frac := prob41(a,b);
+    print("Resultado 4.1:" + str(frac));
+    
+    Bool serasse := prob42(frac, frac1); // fazer atribuicao com rational_t
+    print("Resultado 4.2:" + str(serasse));
+    
+    print("Resultados 4.3 abaixo:");
+    prob43();
+    
+    return -1;
+};
