@@ -63,3 +63,6 @@ na linha 13 de `parser.hs`
 -- perguntar pra umberto
 
 -- deref pointer: estrela de estrela
+
+-- recursao inserir nome tabela var temp ret
+-- struct recursivo

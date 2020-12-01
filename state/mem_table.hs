@@ -15,13 +15,13 @@ import Data.Ord (comparing)
 
 
 addToScope :: String -> OurState -> OurState
-addToScope x (v, f, p, tl, sp, e) = (v, f, p, tl, x ++ "/" ++ sp, e)
+addToScope x (v, subp, tl, sp, e) = (v, subp, tl, x ++ "/" ++ sp, e)
 
 removeFromScope :: OurState -> OurState
-removeFromScope (v, f, p, tl, sp, e) = (v, f, p, tl, removeScopeHead sp, e)
+removeFromScope (v, subp, tl, sp, e) = (v, subp, tl, removeScopeHead sp, e)
 
 getScope :: OurState -> String
-getScope (_, _, _, _, sp, _) = sp
+getScope (_, _, _, sp, _) = sp
 
 
 removeScopeHead :: String -> String
@@ -43,7 +43,7 @@ isSuffixOf s (hx:tx) =
 
 
 getValFromState :: VarParam -> OurState -> Type
-getValFromState x ((l, counter), _, _, _, _, _) = (getTypeFromMaxScope (filterMatchedVars x l))
+getValFromState x ((l, counter), _, _, _, _) = (getTypeFromMaxScope (filterMatchedVars x l))
 
 
 getTypeFromMaxScope :: [Var] -> Type
@@ -66,7 +66,7 @@ filterMatchedVars (idA, spA, tA) ((idB, spB, headB : tailB):tailVars) =
 
 
 getAddrFromIdFromState :: String -> OurState -> Type -- (pointerType)
-getAddrFromIdFromState idd ((v, _), _, _, _, _, _) = getAddrFromIdFromMemTable idd v
+getAddrFromIdFromState idd ((v, _), _, _, _, _) = getAddrFromIdFromMemTable idd v
 
 
 getAddrFromIdFromMemTable :: String -> [Var] -> Type -- (pointerType)
@@ -74,16 +74,17 @@ getAddrFromIdFromMemTable idA ((idB, spB, headB : tailB):tailVars) =
                   if (idA == idB) then (PointerType (headB, (idB, spB)))
                   else getAddrFromIdFromMemTable idA tailVars
 
+
 --------------------------------------------------------------------------------
 ----------------------------------  SETTER   -----------------------------------
 --------------------------------------------------------------------------------
 
 
 memTable :: Operation -> VarParam -> OurState -> OurState
-memTable UPDATE x ((l, counter), f, p, t, sp, e) = ((updateMemTable x l, counter), f, p, t, sp, e)
-memTable INSERT (_, "heap", varVal) ((l, counter), f, p, t, sp, e) = ((insertMemTable ((show counter), "heap", varVal) l, (counter + 1)), f, p, t, sp, e)
-memTable INSERT x ((l, counter), f, p, t, sp, e) = ((insertMemTable x l, counter), f, p, t, sp, e)
-memTable REMOVE x ((l, counter), f, p, t, sp, e) = ((removeMemTable x l, counter), f, p, t, sp, e)
+memTable UPDATE x ((l, counter), subp, t, sp, e) = ((updateMemTable x l, counter), subp, t, sp, e)
+memTable INSERT (_, "heap", varVal) ((l, counter), subp, t, sp, e) = ((insertMemTable ((show counter), "heap", varVal) l, (counter + 1)), subp, t, sp, e)
+memTable INSERT x ((l, counter), subp, t, sp, e) = ((insertMemTable x l, counter), subp, t, sp, e)
+memTable REMOVE x ((l, counter), subp, t, sp, e) = ((removeMemTable x l, counter), subp, t, sp, e)
 
 
 getAlloc :: OurState -> Type -> Type
@@ -91,7 +92,7 @@ getAlloc s t = (PointerType (t, (getCounterStr s, "heap")))
 
 
 getCounterStr :: OurState -> String
-getCounterStr ((l, counter), f, p, t, sp, e) = (show counter)
+getCounterStr ((l, counter), subp, t, sp, e) = (show counter)
 
 
 insertMemTable :: VarParam -> [Var] -> [Var]

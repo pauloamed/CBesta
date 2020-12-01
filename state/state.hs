@@ -12,11 +12,10 @@ import OurType
 
 type Var = (String, String, [Type])
 type VarParam = (String, String, Type)
-type Func = (String, Type, [(String, Type)], [Token])
-type Proc = (String, [(String, Type)], [Token])
+type SubProg = (String, Type, [(String, Type)], [Token])
 
 -- Memoria, Funcoes, Procedimentos, Tipos e EM_EXEC
-type OurState = (([Var], Int), [Func], [Proc], [Type], String, Bool)
+type OurState = (([Var], Int), [SubProg], [Type], String, Bool)
 
 
 
@@ -26,16 +25,16 @@ type OurState = (([Var], Int), [Func], [Proc], [Type], String, Bool)
 
 
 turnExecOn :: OurState -> OurState
-turnExecOn (v, f, p, tl, sp, _) = (v, f, p, tl, sp, True)
+turnExecOn (v, subp, tl, sp, _) = (v, subp, tl, sp, True)
 
 turnExecOff :: OurState -> OurState
-turnExecOff (v, f, p, tl, sp, _) = (v, f, p, tl, sp, False)
+turnExecOff (v, subp, tl, sp, _) = (v, subp, tl, sp, False)
 
 toggleExec :: OurState -> OurState
-toggleExec (v, f, p, tl, sp, x) = (v, f, p, tl, sp, not x)
+toggleExec (v, subp, tl, sp, x) = (v, subp, tl, sp, not x)
 
 isExecOn :: OurState -> Bool
-isExecOn (_, _, _, _, _, b) = b
+isExecOn (_, _, _, _, b) = b
 
 
 --------------------------------------------------------------------------------
