@@ -28,17 +28,19 @@ na linha 13 de `parser.hs`
 -- guardarão (nome, retorno, args, codigo) como (String, Type, [Type], [Token])
 
 
-30.11:
-  - ponteiro e struct
+1.12:
+  - funcao e procs
+
+
+-variaveis do lado esqerdo
+
+  - ponteiro
 
 -- como re executar a lista de tokens? -- OK
 -- como controlar os returns?
 -- como usar o cabecalho (parametros) na exeuccao da funcao? -- OK
 - while e for
 -- funcao recursiva para simular iteracao
-- struct
--- como usar uma struct ja declarada?
--- acesso/controle dos elementos
 - getStringFromId
 -- hj em dia trata token, mas vai ter que tratar Parser (indexacao)
 -- botar um get scope no parser do id tbm?
@@ -58,10 +60,6 @@ na linha 13 de `parser.hs`
 
 
 - restringir o free pra desalocar somente as variaveis alcoaadas na heap?
--- melhorar isso de pesqusia por escopo
+-- perguntar pra umberto
 
 -- deref pointer: estrela de estrela
-
-*****id
-id[][][][][]
-id.id.id.id

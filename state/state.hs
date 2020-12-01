@@ -12,8 +12,8 @@ import OurType
 
 type Var = (String, String, [Type])
 type VarParam = (String, String, Type)
-type Func = (String, Type, [Type], [Token])
-type Proc = (String, [Type], [Token])
+type Func = (String, Type, [(String, Type)], [Token])
+type Proc = (String, [(String, Type)], [Token])
 
 -- Memoria, Funcoes, Procedimentos, Tipos e EM_EXEC
 type OurState = (([Var], Int), [Func], [Proc], [Type], String, Bool)

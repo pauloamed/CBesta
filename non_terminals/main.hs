@@ -104,7 +104,8 @@ stmtIdParser = (do  idd <- idToken -- aqui eh escrita
                     assignmentOrFuncall <- (do  maybeIndex <- (return []) -- TODO
                                                 assignment <- assignmentsOpParser (idd:maybeIndex)
                                                 return (maybeIndex ++ assignment)) <|>
-                                            funcallOpParser
+                                            (do (_, tokens) <- funcallOpParser idd
+                                                return tokens)
                     return (idd:assignmentOrFuncall))
 
 

@@ -21,6 +21,7 @@ import TypesTable
 import OurState
 import OurType
 
+import BasicExecUtils
 
 
 -- <return> -> RETURN [ <expr> ]
@@ -33,18 +34,18 @@ returnParser = (do  ret <- returnToken
 
 
 -- <args> -> <type> ID { COMMA <type> ID } | LAMBDA
-argsParser :: ParsecT [Token] OurState IO([Type], [Token])
+argsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
 argsParser = (do  (semanType, tokenType) <- typeParser
                   idd <- idToken -- aqui eh token mesmo
-                  (remainingArgsSeman, remainingArgsTokens) <- remainingArgsParser
-                  return ((semanType:remainingArgsSeman, tokenType ++ idd:remainingArgsTokens))) <|>
+                  (remainingArgs, remainingArgsTokens) <- remainingArgsParser
+                  return (((getStringFromId idd, semanType):remainingArgs, tokenType ++ idd:remainingArgsTokens))) <|>
               (return ([], []))
 
 
-remainingArgsParser :: ParsecT [Token] OurState IO([Type], [Token])
+remainingArgsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
 remainingArgsParser = (do   comma <- commaToken
                             (semanType, tokenType) <- typeParser
                             idd <- idToken -- aqui eh token mesmo
-                            (tailSemanTypes, tailTokenTypes) <- remainingArgsParser
-                            return ((semanType:tailSemanTypes), comma:tokenType ++ idd:tailTokenTypes)) <|>
+                            (tailArgs, tailTokenArgs) <- remainingArgsParser
+                            return (((getStringFromId idd, semanType):tailArgs), comma:tokenType ++ idd:tailTokenArgs)) <|>
                       (return ([], []))

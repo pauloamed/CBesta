@@ -175,13 +175,11 @@ literalParser = (do   x <- intLitToken <|> boolLitToken <|> doubleLitToken <|> s
 --------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------
 
--- id()
--- id[0].x[3].y
 
 -- <value_id> -> ID [(<index_op> | <funcall>)]
 valueIdParser :: ParsecT [Token] OurState IO(Type, [Token])
 valueIdParser = (do   idd <- idToken
-                      (flag, modifiers, funcallOpOrIndexOp) <- (do  x <- funcallOpParser
+                      (flag, modifiers, funcallOpOrIndexOp) <- (do  (_, x) <- funcallOpParser idd
                                                                     return ("funcall", [], x)) <|>
                                                                (do  (modifiers, tokens) <- accessModifierOpParser
                                                                     return ("access", modifiers, tokens)) <|>
@@ -189,6 +187,9 @@ valueIdParser = (do   idd <- idToken
 
                       s <- getState
                       if (flag == "funcall") then do
+                        -- se for funcall queremos retornar um Type com o resultado da chamada
+                        -- da funcao
+                        -- teria alguma funcao tipo:
                         return (NULL, (idd:funcallOpOrIndexOp))
                       else do
                         return (getValFromValAndModifiers (getValFromState (getStringFromId idd, getScope s, NULL) s) modifiers,
@@ -230,25 +231,32 @@ derefPointerParser = (do  star <- starToken
 --------------------------------------------------------------------------------------------
 
 
--- <funcall> -> ID <funcall_op>
-funcallParser :: ParsecT [Token] OurState IO([Token])
-funcallParser = (do   idd <- idToken -- aqui eh token mesmo
-                      funcallOp <- funcallOpParser
-                      return (idd:funcallOp))
-
-
 -- <funcall_op> -> LEFT_PARENT <funcall_args> RIGHT_PARENT
-funcallOpParser :: ParsecT [Token] OurState IO([Token])
-funcallOpParser = (do   leftParen <- leftParenToken
-                        funcallArgs <- (do  (_, expr) <- exprParser
-                                            remaining <- many (do   comma <- commaToken
-                                                                    (_, expr) <- exprParser
-                                                                    return (comma:expr))
-                                            return (expr++concat(remaining))) <|>
-                                       (return [])
-                        rightParen <- rightParenToken
-                        return (leftParen:funcallArgs ++ [rightParen]))
+funcallOpParser :: Token -> ParsecT [Token] OurState IO(Type, [Token])
+funcallOpParser idd = (do   leftParen <- leftParenToken
+                            (valArgs, tokenArgs) <- (do   (valExpr, tokensExpr) <- exprParser
+                                                          (tailVals, tailTokens) <- funcallArgsParser
+                                                          return ((valExpr:tailVals), tokensExpr ++ tailTokens)) <|>
+                                                    (return ([], []))
+                            rightParen <- rightParenToken
 
+                            -- achar idd na tabela
+                            -- ver se os argumentos dela batem com os aqui usados
+
+                            -- processar a funcao
+                              -- assignments dos parametros da funcao
+                              -- reintroduzir a lista de tokens ao parsec
+                              -- chamar um parser pra processamento
+
+                            return (NULL, leftParen:tokenArgs ++ [rightParen]))
+
+
+funcallArgsParser :: ParsecT [Token] OurState IO([Type], [Token])
+funcallArgsParser = (do   comma <- commaToken
+                          (valExpr, tokensExpr) <- exprParser
+                          (tailVals, tailTokens) <- funcallArgsParser
+                          return ((valExpr:tailVals), comma:tokensExpr ++ tailTokens)) <|>
+                    (return ([], []))
 
 
 --------------------------------------------------------------------------------------------
