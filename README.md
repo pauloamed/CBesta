@@ -28,17 +28,15 @@ na linha 13 de `parser.hs`
 -- guardarão (nome, retorno, args, codigo) como (String, Type, [Type], [Token])
 
 
-2.12:
-  - resolver isso de escopo em recursao
-  - returns
-
 3.12:
+  - resolver isso de escopo (1:20)
+  - returns (1:30)
+  - struct recursivo (resto)
+4.12:
   - deref pointer
   -- recursivo, mais de uma estrela
   - gravar valor em vetor e struct
   -- id do lado esquerdo em geral
-4.12:
-  - struct recursivo
   - while e for
   -- funcao recursiva para simular iteracao
 
@@ -61,3 +59,5 @@ na linha 13 de `parser.hs`
 -- caso contrario, ignora ou erro
 
 - so pode chamar funcoes dentro de expressoes!
+
+- trocar escopo do if pra else

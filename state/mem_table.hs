@@ -16,13 +16,13 @@ import Control.Monad.IO.Class
 
 
 addToScope :: String -> OurState -> OurState
-addToScope x (v, subp, tl, sp, e) = (v, subp, tl, x ++ "/" ++ sp, e)
+addToScope x (v, subp, tl, sp, e, contSubpr) = (v, subp, tl, x ++ "/" ++ sp, e, contSubpr)
 
 removeFromScope :: OurState -> OurState
-removeFromScope ((v, heapCounter), subp, tl, sp, e) = ((removeScopeFromMemTable sp v, heapCounter), subp, tl, removeScopeHead sp, e)
+removeFromScope ((v, heapCounter), subp, tl, sp, e, contSubpr) = ((removeScopeFromMemTable sp v, heapCounter), subp, tl, removeScopeHead sp, e, contSubpr)
 
 getScope :: OurState -> String
-getScope (_, _, _, sp, _) = sp
+getScope (_, _, _, sp, _, _) = sp
 
 
 removeScopeHead :: String -> String
@@ -44,35 +44,37 @@ isSuffixOf s (hx:tx) =
 
 
 getValFromState :: VarParam -> OurState -> Type
-getValFromState x ((l, counter), _, _, _, _) = (getTypeFromMaxScope (filterMatchedVars x l))
+getValFromState x ((l, _), _, _, _, _, _) = (getTypeFromMaxScope (filterMatchedVars x l))
 
 
 getTypeFromMaxScope :: [Var] -> Type
 getTypeFromMaxScope [] = NULL
-getTypeFromMaxScope [(idA, spA, headA : tailA, lastAct)] = headA
-getTypeFromMaxScope ((idA, spA, headA : tailA, lastAct):(idB, spB, headB : tailB, lastActB):tailVars) =
+getTypeFromMaxScope [(idA, spA, (typeHeadA, counterHeadA) : tailA)] = typeHeadA
+getTypeFromMaxScope ((idA, spA, headA : tailA):(idB, spB, headB : tailB):tailVars) =
               if (length spA > length spB) then do
-                getTypeFromMaxScope ((idA, spA, headA : tailA, lastActB):tailVars)
+                getTypeFromMaxScope ((idA, spA, headA : tailA):tailVars)
               else do
-                getTypeFromMaxScope ((idB, spB, headB : tailB, lastActB):tailVars)
+                getTypeFromMaxScope ((idB, spB, headB : tailB):tailVars)
 
 
 filterMatchedVars :: VarParam -> [Var] -> [Var]
 filterMatchedVars (idA, spA, _) [] = []
-filterMatchedVars (idA, spA, tA) ((idB, spB, headB : tailB, lastActB):tailVars) =
+filterMatchedVars (idA, spA, tA) ((idB, spB, headB : tailB):tailVars) =
             if ((idA == idB) && (isSuffixOf spB spA)) then do
-              ((idB, spB, headB : tailB, lastActB): (filterMatchedVars (idA, spA, tA) tailVars))
+              ((idB, spB, headB : tailB): (filterMatchedVars (idA, spA, tA) tailVars))
             else (filterMatchedVars (idA, spA, tA) tailVars)
+filterMatchedVars _ _ = undefined
 
 
 
 getAddrFromIdFromState :: String -> OurState -> Type -- (pointerType)
-getAddrFromIdFromState idd ((v, _), _, _, _, _) = getAddrFromIdFromMemTable idd v
+getAddrFromIdFromState idd ((v, _), _, _, _, _, _) = getAddrFromIdFromMemTable idd v
 
 
+-- tem que ter controle de escopo, nao ta tendo
 getAddrFromIdFromMemTable :: String -> [Var] -> Type -- (pointerType)
-getAddrFromIdFromMemTable idA ((idB, spB, headB : tailB, lastAct):tailVars) =
-                  if (idA == idB) then (PointerType (headB, (idB, spB)))
+getAddrFromIdFromMemTable idA ((idB, spB, (typeHeadB, _) : tailB):tailVars) =
+                  if (idA == idB) then (PointerType (typeHeadB, (idB, spB)))
                   else getAddrFromIdFromMemTable idA tailVars
 
 
@@ -82,10 +84,10 @@ getAddrFromIdFromMemTable idA ((idB, spB, headB : tailB, lastAct):tailVars) =
 
 
 memTable :: Operation -> VarParam -> OurState -> OurState
-memTable UPDATE x ((l, counter), subp, t, sp, e) = ((updateMemTable x l, counter), subp, t, sp, e)
-memTable INSERT (_, "heap", varVal) ((l, counter), subp, t, sp, e) = ((insertMemTable ((show counter), "heap", varVal) l, (counter + 1)), subp, t, sp, e)
-memTable INSERT x ((l, counter), subp, t, sp, e) = ((insertMemTable x l, counter), subp, t, sp, e)
-memTable REMOVE x ((l, counter), subp, t, sp, e) = ((removeMemTable x l, counter), subp, t, sp, e)
+memTable UPDATE x ((l, counter), subp, t, sp, e, contSubpr) = ((updateMemTable x l, counter), subp, t, sp, e, contSubpr)
+memTable INSERT (_, "heap", varVal) ((l, counter), subp, t, sp, e, contSubpr) = ((insertMemTable 0 ((show counter), "heap", varVal) l, (counter + 1)), subp, t, sp, e, contSubpr)
+memTable INSERT x ((l, counter), subp, t, sp, e, contSubpr) = ((insertMemTable contSubpr x l, counter), subp, t, sp, e, contSubpr)
+memTable REMOVE x ((l, counter), subp, t, sp, e, contSubpr) = ((removeMemTable x l, counter), subp, t, sp, e, contSubpr)
 
 
 getAlloc :: OurState -> Type -> Type
@@ -93,36 +95,41 @@ getAlloc s t = (PointerType (t, (getCounterStr s, "heap")))
 
 
 getCounterStr :: OurState -> String
-getCounterStr ((l, counter), subp, t, sp, e) = (show counter)
+getCounterStr ((l, counter), subp, t, sp, e, contSubpr) = (show counter)
 
 
-insertMemTable :: VarParam -> [Var] -> [Var]
-insertMemTable (idA, spA, typeA) []  = [(idA, spA, [typeA], 0)] -- TODO nao eh 0
-insertMemTable (idA, spA, typeA) ((idB, spB, valListB, lastActB) : l) =
-                    if (idA == idB) && (spA == spB) then (idA, spA, typeA : valListB, lastActB) : l
-                    else (idB, spB, valListB, lastActB) : insertMemTable (idA, spA, typeA) l
+insertMemTable :: Int -> VarParam -> [Var] -> [Var]
+insertMemTable activeSubpr (idA, spA, typeA) []  = [(idA, spA, [(typeA, activeSubpr)])]
+insertMemTable activeSubpr (idA, spA, typeA) ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
+                    if (idA == idB) && (spA == spB) then do
+                      if activeSubpr > counterHeadB then do
+                        (idA, spA, (typeA, activeSubpr) : (typeHeadB, counterHeadB) : valListB) : l
+                      else undefined
+                    else (idB, spB, (typeHeadB, counterHeadB) : valListB) : insertMemTable activeSubpr (idA, spA, typeA) l
+insertMemTable activeSubpr (idA, spA, typeA) ((idB, spB, []) : l) = undefined
 
 
 updateMemTable :: VarParam -> [Var] -> [Var]
 updateMemTable _ [] = fail "Variable not found"
-updateMemTable (idA, spA, typeA) ((idB, spB, currTypeB : valListB, lastActB) : l) =
-                    if (idA == idB) && (spA == spB) then (idA, spA, typeA : valListB, lastActB) : l
-                    else (idB, spB, currTypeB : valListB, lastActB) : updateMemTable (idA, spA, typeA) l
+updateMemTable (idA, spA, typeA) ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
+                    if (idA == idB) && (spA == spB) then (idA, spA, (typeA, counterHeadB) : valListB) : l
+                    else (idB, spB, (typeHeadB, counterHeadB) : valListB) : updateMemTable (idA, spA, typeA) l
 
 
-removeMemTable :: VarParam -> [Var] -> [Var]
+removeMemTable :: VarParam -> [Var] -> [Var] -- typeA eh nulo
 removeMemTable _ [] = fail "Variable not found"
-removeMemTable (idA, spA, typeA) ((idB, spB, x : valListB, lastActB) : l) =
+removeMemTable (idA, spA, typeA) ((idB, spB, (x : valListB)) : l) =
                     if (idA == idB) && (spA == spB) then do
                       if (valListB == []) then l
-                      else do (idB, spB, valListB, lastActB) : l
-                    else (idB, spB, x : valListB, lastActB) : removeMemTable (idA, spA, typeA) l
+                      else do (idB, spB, valListB) : l
+                    else (idB, spB, (x : valListB)) : removeMemTable (idA, spA, typeA) l
+removeMemTable (idA, spA, typeA) ((idB, spB, []) : l) = undefined
 
 
 removeScopeFromMemTable :: String -> [Var] -> [Var]
 removeScopeFromMemTable _ [] = []
-removeScopeFromMemTable spA ((idB, spB, x : valListB, lastActB) : l) =
+removeScopeFromMemTable spA ((idB, spB, x : valListB) : l) =
                     if (spA == spB) then do
                         if (valListB == []) then removeScopeFromMemTable spA l
-                        else do (idB, spB, valListB, lastActB) : removeScopeFromMemTable spA l
-                    else (idB, spB, x : valListB, lastActB) : removeScopeFromMemTable spA l
+                        else do (idB, spB, valListB) : removeScopeFromMemTable spA l
+                    else (idB, spB, x : valListB) : removeScopeFromMemTable spA l

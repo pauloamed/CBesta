@@ -4,12 +4,12 @@ import OurState
 import OurType
 
 typesTable :: Operation -> Type -> OurState -> OurState
-typesTable INSERT t (v, subp, tl, sp, e) = (v, subp, insertTypesTable t tl, sp, e)
+typesTable INSERT t (v, subp, tl, sp, e, contSubpr) = (v, subp, insertTypesTable t tl, sp, e, contSubpr)
 typesTable _ _ _ = undefined
 
 
 getTypeFromState :: String -> OurState -> Type
-getTypeFromState x (_, _, tl, _, _) = (getTypeFromTypesTable x tl)
+getTypeFromState x (_, _, tl, _, _, _) = (getTypeFromTypesTable x tl)
 
 
 getTypeFromTypesTable :: String -> [Type] -> Type

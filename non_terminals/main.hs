@@ -214,13 +214,7 @@ procParser =  (do   procc <- procToken
 
 
 
--- vai processar enclosed blocks
-processSubProgParser :: ParsecT [Token] OurState IO (Type)
-processSubProgParser = (do  _ <- enclosedBlocksParser
-                            s <- getState
-                            x <- (return (getValFromState ((getStringFromSubprCounter s), heapScope, NULL) s))
-                            s <- updateAndGetState (memTable REMOVE ((getStringFromSubprCounter s), heapScope, NULL))
-                            return x)
+
 
 
 --------------------------------------------------------------------------------------------------------------
@@ -362,10 +356,10 @@ enclosedExprParser = (do  leftParen <- leftParenToken
 remainingExprParser :: (PParser, TokenParser, (Type, [Token])) -> ParsecT [Token] OurState IO (Type, [Token])
 remainingExprParser (ruleParser, opParser, x) = (do   op <- opParser
                                                       y <- ruleParser -- retorna lista de tokens e futuramente um Type
-                                                      
+
                                                       s <- getState
-                                                      
-                                                      result <- remainingExprParser (ruleParser, opParser, (eval x op y (isExecOn s))) 
+
+                                                      result <- remainingExprParser (ruleParser, opParser, (eval x op y (isExecOn s)))
                                                       return (result)) <|> (return x)
 
 
@@ -478,7 +472,7 @@ valueIdOpParser idd = (do   (returnedVal, tokens) <- funcallOpParser idd
 valueIdParser :: ParsecT [Token] OurState IO(Type, [Token])
 valueIdParser = (do   idd <- idToken
                       (val, tokens) <- (valueIdOpParser idd)
-                      liftIO(print val)
+                      -- liftIO(print val)
                       return (val, idd:tokens))
 
 
@@ -517,6 +511,18 @@ derefPointerParser = (do  star <- starToken
 --------------------------------------------------------------------------------------------
 
 
+-- vai processar enclosed blocks
+processSubProgParser :: ParsecT [Token] OurState IO (Type)
+processSubProgParser = (do  _ <- enclosedBlocksParser
+                            s <- getState
+                            x <- (return (getValFromState ((getStringFromSubprCounter s), heapScope, NULL) s))
+                            -- liftIO (print ((getStringFromSubprCounter s), heapScope, NULL))
+                            -- liftIO (print (s))
+                            -- liftIO (print (x))
+                            s <- updateAndGetState (memTable REMOVE ((getStringFromSubprCounter s), heapScope, NULL))
+                            return x)
+
+
 -- <funcall_op> -> LEFT_PARENT <funcall_args> RIGHT_PARENT
 funcallOpParser :: Token -> ParsecT [Token] OurState IO(Type, [Token])
 funcallOpParser idd = (do   leftParen <- leftParenToken
@@ -533,12 +539,15 @@ funcallOpParser idd = (do   leftParen <- leftParenToken
 
                               s <- updateAndGetState (addToScope (getStringFromId idd))
 
+                              s <- updateAndGetState incrActiveSubprCounter
+
+                              -- liftIO ( print s)
                               s <- updateAndGetState (declareArgs (getScope s) argsList valArgs)
+                              -- liftIO ( print s)
 
                               remainingTokens <- getInput
                               setInput (body ++ remainingTokens)
 
-                              s <- updateAndGetState incrActiveSubprCounter
                               returnedVal <- processSubProgParser -- CHAMADA
 
                               s <- updateAndGetState decrActiveSubprCounter
@@ -563,7 +572,7 @@ returnParser :: ParsecT [Token] OurState IO([Token])
 returnParser = (do  ret <- returnToken
                     (valExpr, tokenExpr) <- exprParser <|> (return (NULL, []))
 
-                    liftIO(print valExpr)
+                    -- liftIO(print valExpr)
 
                     s <- getState
                     if (isExecOn s) then do
@@ -697,8 +706,10 @@ printParser = (do printt <- printToken
 
                   s <- getState
                   if isExecOn s then do
+                      liftIO (print ">>>> PRINTPARSER")
                       liftIO (print s)
                       liftIO (print val)
+                      liftIO (print "<<<< PRINTPARSER")
                   else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))
