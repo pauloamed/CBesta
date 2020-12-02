@@ -17,7 +17,7 @@ data Type =
     -- deriving (Eq, Show)
 
 instance Show Type where
-    show (IntType x) = show x
+    show (IntType x) = id ("Int: " ++ (show x))
     show (DoubleType x) = show x
     show (BoolType x) = show x
     show (StringType x) = show x

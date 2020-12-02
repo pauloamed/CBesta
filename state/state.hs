@@ -15,7 +15,7 @@ type VarParam = (String, String, Type)
 type SubProg = (String, Type, [(String, Type)], [Token])
 
 -- Memoria, Funcoes, Procedimentos, Tipos e EM_EXEC
-type OurState = (([Var], Int), [SubProg], [Type], String, Bool)
+type OurState = (([Var], Int), ([SubProg], Int), [Type], String, Bool)
 
 
 
@@ -36,6 +36,19 @@ toggleExec (v, subp, tl, sp, x) = (v, subp, tl, sp, not x)
 isExecOn :: OurState -> Bool
 isExecOn (_, _, _, _, b) = b
 
+
+--------------------------------------------------------------------------------
+-------------------------------  PARSER   ---------------------------------
+--------------------------------------------------------------------------------
+
+updateAndGetState :: (OurState -> OurState) -> ParsecT [Token] OurState IO(OurState)
+updateAndGetState f = (do   updateState f
+                            s <- getState
+                            return s)
+
+
+heapScope :: String
+heapScope = "$$"
 
 --------------------------------------------------------------------------------
 -------------------------------  TABLE_UTILS   ---------------------------------

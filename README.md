@@ -28,41 +28,33 @@ na linha 13 de `parser.hs`
 -- guardarão (nome, retorno, args, codigo) como (String, Type, [Type], [Token])
 
 
-1.12:
-  - funcao e procs
+2.12:
+  - resolver isso de escopo em recursao
+  - returns
 
+3.12:
+  - deref pointer
+  -- recursivo, mais de uma estrela
+  - gravar valor em vetor e struct
+  -- id do lado esquerdo em geral
+4.12:
+  - struct recursivo
+  - while e for
+  -- funcao recursiva para simular iteracao
 
--variaveis do lado esqerdo
-
-  - ponteiro
-
--- como re executar a lista de tokens? -- OK
--- como controlar os returns?
--- como usar o cabecalho (parametros) na exeuccao da funcao? -- OK
-- while e for
--- funcao recursiva para simular iteracao
-- getStringFromId
--- hj em dia trata token, mas vai ter que tratar Parser (indexacao)
--- botar um get scope no parser do id tbm?
-- sair do escopo, limpar as variaveis
-
-- erros (ussar fail)
--- assignment
--- como indicar erros?
--- dupla declaracao
---- variaveis
---- funcs, procs
---- structs
--- substr
---- dar erro ou retornar vazia qnd intervs invalidos sao passados?
--- compatibilidade de tipos
---- tamanho de array tem q ser int
+5 e 6.12:
+  - revisao e controle de erros
+  -- assignment
+  -- como indicar erros?
+  -- dupla declaracao
+  --- variaveis
+  --- funcs, procs
+  --- structs
+  -- substr
+  --- dar erro ou retornar vazia qnd intervs invalidos sao passados?
+  -- compatibilidade de tipos
+  --- tamanho de array tem q ser int
 
 
 - restringir o free pra desalocar somente as variaveis alcoaadas na heap?
 -- perguntar pra umberto
-
--- deref pointer: estrela de estrela
-
--- recursao inserir nome tabela var temp ret
--- struct recursivo

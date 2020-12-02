@@ -70,9 +70,9 @@ blockParser = (do   stmt <- stmtParser
                     return (stmt ++ [sep])) <|>
               (do   compoundStmt <- controlStructureParser <|> subprogramsParser <|> structParser
                     return (compoundStmt)) <|>
-              (do   updateState (addToScope "") -- entrando num novo escopo
+              (do   s <- updateAndGetState (addToScope "") -- entrando num novo escopo
                     enclosedBlocks <- enclosedBlocksParser
-                    updateState removeFromScope -- saindo do escopo criado
+                    s <- updateAndGetState removeFromScope -- saindo do escopo criado
                     return enclosedBlocks)
 
 
@@ -129,11 +129,11 @@ structParser = (do  struct <- structToken
                     -- de tipos. se exec tiver off (vai estar off? kk) so processo os
                     -- tokens
                     if (isExecOn s) then do
-                      updateState turnExecOff
+                      s <- updateAndGetState turnExecOff
                       (declrs, declrsTokens) <- multipleDeclrsParser
-                      updateState turnExecOn
+                      s <- updateAndGetState turnExecOn
                       rightBrace <- rightBraceToken
-                      updateState (typesTable INSERT (StructType (getStringFromId idd, declrs)))
+                      s <- updateAndGetState (typesTable INSERT (StructType (getStringFromId idd, declrs)))
                       return (struct:idd:leftBrace:declrsTokens ++ [rightBrace])
                     else do
                       (declrs, declrsTokens) <- multipleDeclrsParser
@@ -172,11 +172,21 @@ funcParser =  (do   func <- funcToken
                     leftParen <- leftParenToken
                     (argsSeman, args) <- argsParser
                     rightParen <- rightParenToken
-                    enclosedBlocks <- enclosedBlocksParser
 
-                    updateState (subProgTable INSERT (getStringFromId idd, semanType, argsSeman, args ++ enclosedBlocks))
+                    s <- getState
 
-                    return (func:typee ++ idd:leftParen:args ++ rightParen:enclosedBlocks))
+                    if (isExecOn s) then do
+                      s <- updateAndGetState turnExecOff
+                      enclosedBlocks <- enclosedBlocksParser
+                      s <- updateAndGetState turnExecOn
+                      s <- updateAndGetState (subProgTable INSERT (getStringFromId idd, semanType, argsSeman, enclosedBlocks))
+                      return (func:typee ++ idd:leftParen:args ++ rightParen:enclosedBlocks)
+                    else do
+                      enclosedBlocks <- enclosedBlocksParser
+                      s <- updateAndGetState (subProgTable INSERT (getStringFromId idd, semanType, argsSeman, enclosedBlocks))
+                      return (func:typee ++ idd:leftParen:args ++ rightParen:enclosedBlocks))
+
+
 
 
 -- <proc> -> PROC ID <enclosed_args> <enclosed_blocks>
@@ -186,19 +196,30 @@ procParser =  (do   procc <- procToken
                     leftParen <- leftParenToken
                     (argsSeman, args) <- argsParser
                     rightParen <- rightParenToken
-                    enclosedBlocks <- enclosedBlocksParser
 
-                    updateState (subProgTable INSERT (getStringFromId idd, NULL, argsSeman, args ++ enclosedBlocks))
+                    s <- getState
 
-                    return (procc:idd:leftParen:args ++ rightParen:enclosedBlocks))
+                    if (isExecOn s) then do
+                      s <- updateAndGetState turnExecOff
+                      enclosedBlocks <- enclosedBlocksParser
+                      s <- updateAndGetState turnExecOn
+                      s <- updateAndGetState (subProgTable INSERT (getStringFromId idd, NULL, argsSeman, enclosedBlocks))
+                      return (procc:idd:leftParen:args ++ rightParen:enclosedBlocks)
+                    else do
+                      enclosedBlocks <- enclosedBlocksParser
+                      s <- updateAndGetState (subProgTable INSERT (getStringFromId idd, NULL, argsSeman, enclosedBlocks))
+                      return (procc:idd:leftParen:args ++ rightParen:enclosedBlocks))
+
+
+
 
 
 -- vai processar enclosed blocks
 processSubProgParser :: ParsecT [Token] OurState IO (Type)
 processSubProgParser = (do  _ <- enclosedBlocksParser
                             s <- getState
-                            x <- (return (getValFromState ("", "$$", NULL) s))
-                            updateState (memTable REMOVE ("", "$$", NULL))
+                            x <- (return (getValFromState ((getStringFromSubprCounter s), heapScope, NULL) s))
+                            s <- updateAndGetState (memTable REMOVE ((getStringFromSubprCounter s), heapScope, NULL))
                             return x)
 
 
@@ -250,34 +271,34 @@ ifParser =  (do   iff <- ifToken
                   (exprValue, enclosedExpr) <- enclosedExprParser
                   thenn <- thenToken
                   s <- getState
-                  updateState (addToScope "if")
+                  s <- updateAndGetState (addToScope "if")
                   if (not (isExecOn s)) then do
                     enclosedBlock <- enclosedBlocksParser
-                    updateState removeFromScope
+                    s <- updateAndGetState removeFromScope
                     maybeElse <- maybeElseParser
                     return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse)
                   else do
                     if getBoolValue exprValue then do
                       enclosedBlock <- enclosedBlocksParser
-                      updateState removeFromScope
-                      updateState turnExecOff
+                      s <- updateAndGetState removeFromScope
+                      s <- updateAndGetState turnExecOff
                       maybeElse <- maybeElseParser
-                      updateState turnExecOn
+                      s <- updateAndGetState turnExecOn
                       return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse)
                     else do
-                      updateState turnExecOff
+                      s <- updateAndGetState turnExecOff
                       enclosedBlock <- enclosedBlocksParser
-                      updateState removeFromScope
-                      updateState turnExecOn
+                      s <- updateAndGetState removeFromScope
+                      s <- updateAndGetState turnExecOn
                       maybeElse <- maybeElseParser
                       return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse))
 
 
 maybeElseParser :: ParsecT [Token] OurState IO([Token])
-maybeElseParser = (do   updateState (addToScope "if")
+maybeElseParser = (do   s <- updateAndGetState (addToScope "if")
                         elsee <- elseToken
                         ifOrEnclosed <- ifParser <|> enclosedBlocksParser
-                        updateState removeFromScope
+                        s <- updateAndGetState removeFromScope
                         return (elsee:ifOrEnclosed)) <|>
                   (return [])
 
@@ -450,7 +471,7 @@ valueIdOpParser idd = (do   (returnedVal, tokens) <- funcallOpParser idd
 -- <value_id> -> ID [(<index_op> | <funcall>)]
 valueIdParser :: ParsecT [Token] OurState IO(Type, [Token])
 valueIdParser = (do   idd <- idToken
-                      (val, tokens) <- (valueIdOpParser idd) <|> (return (NULL, []))
+                      (val, tokens) <- (valueIdOpParser idd)
                       return (val, idd:tokens))
 
 
@@ -498,23 +519,28 @@ funcallOpParser idd = (do   leftParen <- leftParenToken
                                                     (return ([], []))
                             rightParen <- rightParenToken
 
+
                             s <- getState
+                            if (isExecOn s) then do
+                              (retType, argsList, body) <- (return (searchForSubprogFromState (getStringFromId idd) s))
 
-                            (retType, argsList, body) <- (return (searchForSubprogFromState (getStringFromId idd) s))
-                            updateState (declareArgs (getScope s) argsList valArgs)
+                              s <- updateAndGetState (addToScope (getStringFromId idd))
 
-                            remainingTokens <- getInput
-                            setInput (body ++ remainingTokens)
-                            returnedVal <- processSubProgParser
+                              s <- updateAndGetState (declareArgs (getScope s) argsList valArgs)
 
-                            updateState turnExecOn
+                              remainingTokens <- getInput
+                              setInput (body ++ remainingTokens)
 
-                            -- se returnedVal eh diferente de reType, da erro
+                              s <- updateAndGetState incrActiveSubprCounter
+                              returnedVal <- processSubProgParser -- CHAMADA
 
-                            liftIO (print returnedVal)
+                              s <- updateAndGetState decrActiveSubprCounter
 
+                              s <- updateAndGetState removeFromScope
+                              s <- updateAndGetState turnExecOn
+                              return (returnedVal, leftParen:tokenArgs ++ [rightParen])
+                            else do return (NULL, leftParen:tokenArgs ++ [rightParen]))
 
-                            return (returnedVal, leftParen:tokenArgs ++ [rightParen]))
 
 
 funcallArgsParser :: ParsecT [Token] OurState IO([Type], [Token])
@@ -532,11 +558,12 @@ returnParser = (do  ret <- returnToken
 
                     s <- getState
                     if (isExecOn s) then do
-                      updateState(memTable INSERT ("", "$$", valExpr))
-                      updateState turnExecOff
-                    else do pure ()
+                      s <- updateAndGetState (memTable INSERT ((getStringFromSubprCounter s), heapScope, valExpr))
+                      s <- updateAndGetState turnExecOff
+                      return (ret:tokenExpr)
+                    else do return (ret:tokenExpr))
 
-                    return (ret:tokenExpr))
+
 
 
 -- <args> -> <type> ID { COMMA <type> ID } | LAMBDA
@@ -585,7 +612,7 @@ allocParser = (do   alloc <- allocToken
                     rp <- rightParenToken
 
                     s <- getState
-                    updateState (memTable INSERT ("", "heap", semanType))
+                    s <- updateAndGetState (memTable INSERT ("", "heap", semanType))
 
                     return (getAlloc s semanType, alloc:lp:tokenType ++ [rp]))
 
@@ -647,7 +674,7 @@ freeParser = (do  free <- freeToken
                   -- exprVal tem que ser do tipo PointerType(tipo, id, escopo)
                   -- se nao for da merda...
                   -- remover (id, escopo) de memtable
-                  updateState(memTable REMOVE (getAddrFromPointer exprVal))
+                  s <- updateAndGetState(memTable REMOVE (getAddrFromPointer exprVal))
                   return (free:exprTokens))
 
 
@@ -658,11 +685,11 @@ printParser = (do printt <- printToken
                   (val, expr) <- exprParser
                   rightParen <- rightParenToken
 
-                  s <- getState
-                  liftIO (print s)
-                  liftIO (print "")
 
-                  if isExecOn s then liftIO (print val)
+                  s <- getState
+                  if isExecOn s then do
+                      liftIO (print s)
+                      liftIO (print val)
                   else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))
@@ -678,7 +705,7 @@ readParser = (do  readd <- readToken
                   readVal <- liftIO (getLine)
                   s <- getState
 
-                  updateState(memTable UPDATE (getStringFromId idd, getScope s, convertStringToType readVal (getValFromState (getStringFromId idd, getScope s, NULL) s)))
+                  s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, convertStringToType readVal (getValFromState (getStringFromId idd, getScope s, NULL) s)))
 
                   return (readd:leftParen:val ++ [rightParen]))
 
@@ -707,7 +734,7 @@ assignmentsOpParser :: [Token] -> ParsecT [Token] OurState IO([Token])
 assignmentsOpParser (idd:prefix) = (do  (exprVal, assignExpr) <- assignExprParser
 
                                         s <- getState
-                                        updateState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
+                                        s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
 
                                         remaining <- remainingAssignsParser
 
@@ -720,7 +747,7 @@ assignmentParser = (do  (idd:x) <- idParser <|> derefPointerParser
                         (exprVal, assignExpr) <- assignExprParser
 
                         s <- getState
-                        updateState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
+                        s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
 
                         return ((idd:x) ++ assignExpr))
 
@@ -759,10 +786,10 @@ declrsParser = (do  (semanType, typee) <- typeParser
                     s <- getState
                     if isExecOn s then do -- checando se flag de execucao ta on
                       if val == NULL then do
-                        updateState(memTable INSERT (getStringFromId idd, getScope s, semanType))
+                        s <- updateAndGetState(memTable INSERT (getStringFromId idd, getScope s, semanType))
                         return (((getStringFromId idd, semanType):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
                       else do
-                        updateState(memTable INSERT (getStringFromId idd, getScope s, val))
+                        s <- updateAndGetState(memTable INSERT (getStringFromId idd, getScope s, val))
                         return (((getStringFromId idd, val):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
                     else do
                       if val == NULL then do
@@ -790,9 +817,9 @@ remainingDeclrsParser typee = (do   comma <- commaToken
                                     (vals, tokens) <- remainingDeclrsParser typee
                                     s <- getState
                                     if val == NULL then do
-                                      updateState(memTable INSERT (getStringFromId idd, getScope s, typee))
+                                      s <- updateAndGetState (memTable INSERT (getStringFromId idd, getScope s, typee))
                                       return ((getStringFromId idd, typee):vals, comma:idd:maybeAssignExpr ++ tokens)
                                     else do
-                                      updateState(memTable INSERT (getStringFromId idd, getScope s, val))
+                                      s <- updateAndGetState (memTable INSERT (getStringFromId idd, getScope s, val))
                                       return ((getStringFromId idd, val):vals, comma:idd:maybeAssignExpr ++ tokens)) <|>
                               (return ([], []))

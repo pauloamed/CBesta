@@ -1,5 +1,10 @@
-func Int foo(){
-  return 0;
+func Int fat(Int x){
+  print(x);
+  if(x == 0) then{
+    return 1;
+  }else{
+    return x * fat(x - 1);
+  }
 }
 
-print(foo());
+print(fat(1000));

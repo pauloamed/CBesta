@@ -3,11 +3,12 @@ module MemTable where
 import OurState
 import OurType
 
+import Text.Parsec
+
+import Lexer
+
 import Control.Monad.IO.Class
 
-
-import Data.List (maximumBy)
-import Data.Ord (comparing)
 
 --------------------------------------------------------------------------------
 ----------------------------------  SCOPE   ------------------------------------
@@ -18,7 +19,7 @@ addToScope :: String -> OurState -> OurState
 addToScope x (v, subp, tl, sp, e) = (v, subp, tl, x ++ "/" ++ sp, e)
 
 removeFromScope :: OurState -> OurState
-removeFromScope (v, subp, tl, sp, e) = (v, subp, tl, removeScopeHead sp, e)
+removeFromScope ((v, heapCounter), subp, tl, sp, e) = ((removeScopeFromMemTable sp v, heapCounter), subp, tl, removeScopeHead sp, e)
 
 getScope :: OurState -> String
 getScope (_, _, _, sp, _) = sp
@@ -112,5 +113,16 @@ updateMemTable (idA, spA, typeA) ((idB, spB, currTypeB : valListB) : l) =
 removeMemTable :: VarParam -> [Var] -> [Var]
 removeMemTable _ [] = fail "Variable not found"
 removeMemTable (idA, spA, typeA) ((idB, spB, x : valListB) : l) =
-                    if (idA == idB) && (spA == spB) then l
+                    if (idA == idB) && (spA == spB) then do
+                      if (valListB == []) then l
+                      else do (idB, spB, valListB) : l
                     else (idB, spB, x : valListB) : removeMemTable (idA, spA, typeA) l
+
+
+removeScopeFromMemTable :: String -> [Var] -> [Var]
+removeScopeFromMemTable _ [] = []
+removeScopeFromMemTable spA ((idB, spB, x : valListB) : l) =
+                    if (spA == spB) then do
+                        if (valListB == []) then removeScopeFromMemTable spA l
+                        else do (idB, spB, valListB) : removeScopeFromMemTable spA l
+                    else (idB, spB, x : valListB) : removeScopeFromMemTable spA l

@@ -15,9 +15,10 @@ declareArgs sp (faHead:faTail) [] s = undefined
 declareArgs sp [] (aaHead:aaTail) s = undefined
 declareArgs sp [] [] s = s
 declareArgs sp ((idFaHead, typeFaHead):faTail) (aaHead:aaTail) s =
-    if (typeFaHead == aaHead) then do
+    if ((getDefaultValue typeFaHead) == (getDefaultValue aaHead)) then do
       memTable INSERT (idFaHead, sp, aaHead) (declareArgs sp faTail aaTail s)
-    else undefined
+    else do
+      undefined
 
 
 
@@ -90,6 +91,14 @@ getLiteralType (DoubleLit _ x) = (DoubleType x)
 getLiteralType (BoolLit _ x) = (BoolType x)
 getLiteralType (StringLit _ x) = (StringType x)
 getLiteralType _ = undefined
+
+
+getDefaultValue :: Type -> Type
+getDefaultValue (IntType _) = (IntType 0)
+getDefaultValue (DoubleType _) = (DoubleType 0.0)
+getDefaultValue (BoolType _) = (BoolType False)
+getDefaultValue (StringType _) = (StringType "")
+getDefaultValue _ = undefined
 
 
 createSimpleType :: Token -> Type
