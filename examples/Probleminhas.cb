@@ -3,20 +3,20 @@
 #import "biblioteca";
 
 
-struct rational_t {
+struct Rational_t {
     Int numerador, denominador;
 }
 
 
 // Problema 1
 proc prob1(Double x, Double y, Int c) {
-    Double res := x*x - y + c;
+    Double res := x*x - y + cast(c, Double);
     print(res);
 }
 
 // Problema 4.1 (sei n ;--;)
-func rational_t prob41(Int a, Int b) {
-    rational_t fracao = new rational_t;
+func Rational_t prob41(Int a, Int b) {
+    Rational_t fracao = new Rational_t;
     fracao.numerador := a;
     fracao.denominador := b;
     
@@ -24,7 +24,7 @@ func rational_t prob41(Int a, Int b) {
 }
 
 // Problema 4.2
-func bool prob42(rational_t a, rational_t b) {
+func bool prob42(Rational_t a, Rational_t b) {
     Double x,y;
     x := a.numerador/a.denominador;
     y := b.numerador/b.denominador;
@@ -33,7 +33,7 @@ func bool prob42(rational_t a, rational_t b) {
 }
 
 // Problema 4.3
-proc prob43(rational_t a, rational_t b) {
+proc prob43(Rational_t a, Rational_t b) {
 
     // Realiza os outros subprogramas
     frac_soma := prob4_soma(a,b);

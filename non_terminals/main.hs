@@ -362,7 +362,10 @@ enclosedExprParser = (do  leftParen <- leftParenToken
 remainingExprParser :: (PParser, TokenParser, (Type, [Token])) -> ParsecT [Token] OurState IO (Type, [Token])
 remainingExprParser (ruleParser, opParser, x) = (do   op <- opParser
                                                       y <- ruleParser -- retorna lista de tokens e futuramente um Type
-                                                      result <- remainingExprParser (ruleParser, opParser, (eval x op y))
+                                                      
+                                                      s <- getState
+                                                      
+                                                      result <- remainingExprParser (ruleParser, opParser, (eval x op y (isExecOn s))) 
                                                       return (result)) <|> (return x)
 
 
@@ -370,7 +373,8 @@ remainingExprParserRight :: (PParser, TokenParser, (Type, [Token])) -> ParsecT [
 remainingExprParserRight (ruleParser, opParser, x) = (do  op <- opParser
                                                           y <- ruleParser -- retorna lista de tokens e futuramente um Type
                                                           result <- remainingExprParserRight (ruleParser, opParser, y)
-                                                          return (eval x op y)) <|> (return x)
+                                                          s <- getState
+                                                          return (eval x op y (isExecOn s))) <|> (return x)
 
 
 -- <expr> -> <expr_7> <remaining_expr>(<expr7>, OR)
@@ -463,6 +467,8 @@ valueIdOpParser idd = (do   (returnedVal, tokens) <- funcallOpParser idd
                       (do   (modifiers, tokens) <- accessModifierOpParser
                             s <- getState
 
+                            -- liftIO (print (getStringFromId idd, getScope s, NULL))
+
                             return (getValFromValAndModifiers (getValFromState (getStringFromId idd, getScope s, NULL) s) modifiers,
                                      tokens))
 
@@ -472,6 +478,7 @@ valueIdOpParser idd = (do   (returnedVal, tokens) <- funcallOpParser idd
 valueIdParser :: ParsecT [Token] OurState IO(Type, [Token])
 valueIdParser = (do   idd <- idToken
                       (val, tokens) <- (valueIdOpParser idd)
+                      liftIO(print val)
                       return (val, idd:tokens))
 
 
@@ -555,6 +562,8 @@ funcallArgsParser = (do   comma <- commaToken
 returnParser :: ParsecT [Token] OurState IO([Token])
 returnParser = (do  ret <- returnToken
                     (valExpr, tokenExpr) <- exprParser <|> (return (NULL, []))
+
+                    liftIO(print valExpr)
 
                     s <- getState
                     if (isExecOn s) then do

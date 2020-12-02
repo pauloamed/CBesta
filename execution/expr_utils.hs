@@ -15,8 +15,9 @@ fastExpo x n =
         else ((fastExpo x (div n 2)) ^ 2) * x
 
 
-eval :: (Type, [Token]) -> Token -> (Type, [Token]) -> (Type, [Token])
-eval (typeX, xTokens) opToken (typeY, yTokens) = (evalType typeX opToken typeY, xTokens ++ opToken : yTokens)
+eval :: (Type, [Token]) -> Token -> (Type, [Token]) -> Bool -> (Type, [Token])
+eval (typeX, xTokens) opToken (typeY, yTokens) True = (evalType typeX opToken typeY, xTokens ++ opToken : yTokens)
+eval (typeX, xTokens) opToken (typeY, yTokens) False = (NULL, xTokens ++ opToken : yTokens)
 
 
 evalUnopType :: Token -> Type -> Type
@@ -43,6 +44,9 @@ evalType (IntType x) (Div _) (IntType y) = IntType (div x y)
 evalType (IntType x) (Plus _) (IntType y) = IntType (x + y)
 evalType (IntType x) (Minus _) (IntType y) = IntType (x - y)
 evalType (IntType x) (Star _) (IntType y) = IntType (x * y)
+evalType (DoubleType x) (Plus _) (DoubleType y) = DoubleType (x + y)
+evalType (DoubleType x) (Minus _) (DoubleType y) = DoubleType (x - y)
+evalType (DoubleType x) (Star _) (DoubleType y) = DoubleType (x * y)
 -- evalType (IntType x) (Expo _) (DoubleType y) = DoubleType (x ^/ y)
 evalType _ _ _ = undefined
 

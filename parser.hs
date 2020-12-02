@@ -14,7 +14,7 @@ parser tokens = runParserT programParser (([], 0), ([], 0), [], "$", True) "Erro
 
 main :: IO ()
 -- main = print((getTokens "ultimate.cb"))
-main =  case unsafePerformIO( parser (getTokens "examples/simple.cb")) of
+main =  case unsafePerformIO( parser (getTokens "examples/Probleminhas.cb")) of
             { Left err -> print err;
               Right ans -> print (id "DONE")
               -- Right ans -> print ans
