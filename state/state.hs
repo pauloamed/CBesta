@@ -10,7 +10,7 @@ import OurType
 --------------------------------------------------------------------------------
 
 
-type Var = (String, String, [Type])
+type Var = (String, String, [Type], Int)
 type VarParam = (String, String, Type)
 type SubProg = (String, Type, [(String, Type)], [Token])
 

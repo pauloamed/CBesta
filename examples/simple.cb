@@ -1,10 +1,7 @@
 func Int fat(Int x){
-  print(x);
-  if(x == 0) then{
-    return 1;
-  }else{
-    return x * fat(x - 1);
-  }
+  Int y;
+  Int y;
+  print("");
 }
 
-print(fat(1000));
+fat(0);

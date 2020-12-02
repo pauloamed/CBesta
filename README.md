@@ -57,4 +57,7 @@ na linha 13 de `parser.hs`
 
 
 - restringir o free pra desalocar somente as variaveis alcoaadas na heap?
--- perguntar pra umberto
+-- sim!
+-- caso contrario, ignora ou erro
+
+- so pode chamar funcoes dentro de expressoes!

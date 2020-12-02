@@ -49,19 +49,19 @@ getValFromState x ((l, counter), _, _, _, _) = (getTypeFromMaxScope (filterMatch
 
 getTypeFromMaxScope :: [Var] -> Type
 getTypeFromMaxScope [] = NULL
-getTypeFromMaxScope [(idA, spA, headA : tailA)] = headA
-getTypeFromMaxScope ((idA, spA, headA : tailA):(idB, spB, headB : tailB):tailVars) =
+getTypeFromMaxScope [(idA, spA, headA : tailA, lastAct)] = headA
+getTypeFromMaxScope ((idA, spA, headA : tailA, lastAct):(idB, spB, headB : tailB, lastActB):tailVars) =
               if (length spA > length spB) then do
-                getTypeFromMaxScope ((idA, spA, headA : tailA):tailVars)
+                getTypeFromMaxScope ((idA, spA, headA : tailA, lastActB):tailVars)
               else do
-                getTypeFromMaxScope ((idB, spB, headB : tailB):tailVars)
+                getTypeFromMaxScope ((idB, spB, headB : tailB, lastActB):tailVars)
 
 
 filterMatchedVars :: VarParam -> [Var] -> [Var]
 filterMatchedVars (idA, spA, _) [] = []
-filterMatchedVars (idA, spA, tA) ((idB, spB, headB : tailB):tailVars) =
+filterMatchedVars (idA, spA, tA) ((idB, spB, headB : tailB, lastActB):tailVars) =
             if ((idA == idB) && (isSuffixOf spB spA)) then do
-              ((idB, spB, headB : tailB): (filterMatchedVars (idA, spA, tA) tailVars))
+              ((idB, spB, headB : tailB, lastActB): (filterMatchedVars (idA, spA, tA) tailVars))
             else (filterMatchedVars (idA, spA, tA) tailVars)
 
 
@@ -71,7 +71,7 @@ getAddrFromIdFromState idd ((v, _), _, _, _, _) = getAddrFromIdFromMemTable idd 
 
 
 getAddrFromIdFromMemTable :: String -> [Var] -> Type -- (pointerType)
-getAddrFromIdFromMemTable idA ((idB, spB, headB : tailB):tailVars) =
+getAddrFromIdFromMemTable idA ((idB, spB, headB : tailB, lastAct):tailVars) =
                   if (idA == idB) then (PointerType (headB, (idB, spB)))
                   else getAddrFromIdFromMemTable idA tailVars
 
@@ -97,32 +97,32 @@ getCounterStr ((l, counter), subp, t, sp, e) = (show counter)
 
 
 insertMemTable :: VarParam -> [Var] -> [Var]
-insertMemTable (idA, spA, typeA) []  = [(idA, spA, [typeA])]
-insertMemTable (idA, spA, typeA) ((idB, spB, valListB) : l) =
-                    if (idA == idB) && (spA == spB) then (idA, spA, typeA : valListB) : l
-                    else (idB, spB, valListB) : insertMemTable (idA, spA, typeA) l
+insertMemTable (idA, spA, typeA) []  = [(idA, spA, [typeA], 0)] -- TODO nao eh 0
+insertMemTable (idA, spA, typeA) ((idB, spB, valListB, lastActB) : l) =
+                    if (idA == idB) && (spA == spB) then (idA, spA, typeA : valListB, lastActB) : l
+                    else (idB, spB, valListB, lastActB) : insertMemTable (idA, spA, typeA) l
 
 
 updateMemTable :: VarParam -> [Var] -> [Var]
 updateMemTable _ [] = fail "Variable not found"
-updateMemTable (idA, spA, typeA) ((idB, spB, currTypeB : valListB) : l) =
-                    if (idA == idB) && (spA == spB) then (idA, spA, typeA : valListB) : l
-                    else (idB, spB, currTypeB : valListB) : updateMemTable (idA, spA, typeA) l
+updateMemTable (idA, spA, typeA) ((idB, spB, currTypeB : valListB, lastActB) : l) =
+                    if (idA == idB) && (spA == spB) then (idA, spA, typeA : valListB, lastActB) : l
+                    else (idB, spB, currTypeB : valListB, lastActB) : updateMemTable (idA, spA, typeA) l
 
 
 removeMemTable :: VarParam -> [Var] -> [Var]
 removeMemTable _ [] = fail "Variable not found"
-removeMemTable (idA, spA, typeA) ((idB, spB, x : valListB) : l) =
+removeMemTable (idA, spA, typeA) ((idB, spB, x : valListB, lastActB) : l) =
                     if (idA == idB) && (spA == spB) then do
                       if (valListB == []) then l
-                      else do (idB, spB, valListB) : l
-                    else (idB, spB, x : valListB) : removeMemTable (idA, spA, typeA) l
+                      else do (idB, spB, valListB, lastActB) : l
+                    else (idB, spB, x : valListB, lastActB) : removeMemTable (idA, spA, typeA) l
 
 
 removeScopeFromMemTable :: String -> [Var] -> [Var]
 removeScopeFromMemTable _ [] = []
-removeScopeFromMemTable spA ((idB, spB, x : valListB) : l) =
+removeScopeFromMemTable spA ((idB, spB, x : valListB, lastActB) : l) =
                     if (spA == spB) then do
                         if (valListB == []) then removeScopeFromMemTable spA l
-                        else do (idB, spB, valListB) : removeScopeFromMemTable spA l
-                    else (idB, spB, x : valListB) : removeScopeFromMemTable spA l
+                        else do (idB, spB, valListB, lastActB) : removeScopeFromMemTable spA l
+                    else (idB, spB, x : valListB, lastActB) : removeScopeFromMemTable spA l
