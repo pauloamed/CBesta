@@ -8,6 +8,18 @@ typesTable INSERT t (v, subp, tl, sp, e, contSubpr) = (v, subp, insertTypesTable
 typesTable _ _ _ = undefined
 
 
+updateType :: String -> [(String, Type)] -> OurState -> OurState
+updateType idd declrs (v, subp, tl, sp, e, contSubpr) = (v, subp, updateTypesTable idd declrs tl, sp, e, contSubpr)
+
+
+updateTypesTable :: String -> [(String, Type)] -> [Type] -> [Type]
+updateTypesTable idd declrs [] = undefined
+updateTypesTable idd declrs ((StructType (name, attribs)):typeTail) =
+  if (idd == name) then do 
+    (StructType (name, (attribs ++ declrs)):typeTail)
+  else do ((StructType (name, attribs)):updateTypesTable idd declrs typeTail)
+
+
 getTypeFromState :: String -> OurState -> Type
 getTypeFromState x (_, _, tl, _, _, _) = (getTypeFromTypesTable x tl)
 

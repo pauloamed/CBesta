@@ -139,10 +139,12 @@ structParser = (do  struct <- structToken
                     -- tokens
                     if (isExecOn s) then do
                       s <- updateAndGetState turnExecOff
+                      s <- updateAndGetState (typesTable INSERT (StructType (getStringFromId idd, [])))
                       (declrs, declrsTokens) <- multipleDeclrsParser
                       s <- updateAndGetState turnExecOn
                       rightBrace <- rightBraceToken
-                      s <- updateAndGetState (typesTable INSERT (StructType (getStringFromId idd, declrs)))
+                      liftIO(print declrs)
+                      s <- updateAndGetState (updateType (getStringFromId idd) declrs)
                       return (False, struct:idd:leftBrace:declrsTokens ++ [rightBrace])
                     else do
                       (declrs, declrsTokens) <- multipleDeclrsParser
