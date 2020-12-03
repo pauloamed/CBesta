@@ -38,7 +38,7 @@ type TokenParser = ParsecT [Token] OurState IO (Token)
 -- <program> -> { <import> } <blocks> // IMPORTS EH OPICIONAL
 programParser :: ParsecT [Token] OurState IO([Token])
 programParser = (do   imports <- many importParser
-                      blocks <- blocksParser
+                      (_, blocks) <- blocksParser
                       eof
                       return (concat(imports) ++ blocks))
 
@@ -58,30 +58,37 @@ importParser = (do  hashtag <- hashtagToken
 
 
 -- <blocks> -> { <block> }
-blocksParser :: ParsecT [Token] OurState IO([Token])
-blocksParser = (do  blocks <- many blockParser
-                    return (concat(blocks)))
+blocksParser :: ParsecT [Token] OurState IO(Bool, [Token])
+blocksParser = (do  (hasReturn, block) <- blockParser
+                    (hasReturnRemaining, blocks) <- remainingBlocksParser
+                    return ((hasReturn || hasReturnRemaining), (block ++ blocks)))
+
+
+remainingBlocksParser :: ParsecT [Token] OurState IO(Bool, [Token])
+remainingBlocksParser = (do   (hasReturn, block) <- blockParser
+                              (hasReturnRemaining, blocks) <- remainingBlocksParser
+                              return ((hasReturn || hasReturnRemaining), (block ++ blocks))) <|> (return (False, []))
 
 
 -- <block> -> <stmt> SEPARATOR | <enclosed_blocks>
-blockParser :: ParsecT [Token] OurState IO([Token])
-blockParser = (do   stmt <- stmtParser
+blockParser :: ParsecT [Token] OurState IO(Bool, [Token])
+blockParser = (do   (hasReturn, stmt) <- stmtParser
                     sep <- separatorToken
-                    return (stmt ++ [sep])) <|>
-              (do   compoundStmt <- controlStructureParser <|> subprogramsParser <|> structParser
-                    return (compoundStmt)) <|>
+                    return (hasReturn, stmt ++ [sep])) <|>
+              (do   (hasReturn, compoundStmt) <- controlStructureParser <|> subprogramsParser <|> structParser
+                    return (hasReturn, compoundStmt)) <|>
               (do   s <- updateAndGetState (addToScope "") -- entrando num novo escopo
-                    enclosedBlocks <- enclosedBlocksParser
+                    (hasReturn, enclosedBlocks) <- enclosedBlocksParser
                     s <- updateAndGetState removeFromScope -- saindo do escopo criado
-                    return enclosedBlocks)
+                    return (hasReturn, enclosedBlocks))
 
 
 -- <enclosed_blocks> -> LEFT_BRACE <blocks> RIGHT_BRACE
-enclosedBlocksParser :: ParsecT [Token] OurState IO([Token])
+enclosedBlocksParser :: ParsecT [Token] OurState IO(Bool, [Token])
 enclosedBlocksParser = (do  leftBrace <- leftBraceToken
-                            blocks <- blocksParser
+                            (hasReturn, blocks) <- blocksParser
                             rightBrace <- rightBraceToken
-                            return (leftBrace:blocks ++ [rightBrace]))
+                            return (hasReturn, leftBrace:blocks ++ [rightBrace]))
 
 
 --------------------------------------------------------------------------------------------------------------
@@ -90,16 +97,18 @@ enclosedBlocksParser = (do  leftBrace <- leftBraceToken
 
 
 -- <stmt> -> CONTINUE | BREAK | <return> | <void_command> | <declrs> | <deref_pointer> <assignments_op> | <stmt_id>
-stmtParser :: ParsecT [Token] OurState IO([Token])
+stmtParser :: ParsecT [Token] OurState IO(Bool, [Token])
 stmtParser = (do  x <- continueToken <|> breakToken
-                  return [x]) <|>
-             (do  x <- returnParser <|> voidCommandParser <|> stmtIdParser
-                  return x) <|>
+                  return (False, [x])) <|>
+             (do  x <- voidCommandParser <|> stmtIdParser
+                  return (False, x)) <|>
+             (do  x <- returnParser 
+                  return (True, x)) <|>
              (do  derefPointer <- derefPointerParser
                   assignmentsOp <- assignmentsOpParser derefPointer
-                  return (derefPointer ++ assignmentsOp)) <|>
+                  return (False, (derefPointer ++ assignmentsOp))) <|>
              (do  (_, declrs) <- declrsParser
-                  return (declrs))
+                  return (False, declrs))
 
 
 -- <stmt_id> -> ID ([<index_op>] <assignments_op> | <funcall_op>)
@@ -119,7 +128,7 @@ stmtIdParser = (do  idd <- idToken -- aqui eh escrita
 
 
 -- <struct> -> STRUCT TYPE_ID LEFT_BRACE { <declrs> }+ RIGHT_BRACE
-structParser :: ParsecT [Token] OurState IO([Token])
+structParser :: ParsecT [Token] OurState IO(Bool, [Token])
 structParser = (do  struct <- structToken
                     idd <- typeIdToken
                     leftBrace <- leftBraceToken
@@ -134,11 +143,11 @@ structParser = (do  struct <- structToken
                       s <- updateAndGetState turnExecOn
                       rightBrace <- rightBraceToken
                       s <- updateAndGetState (typesTable INSERT (StructType (getStringFromId idd, declrs)))
-                      return (struct:idd:leftBrace:declrsTokens ++ [rightBrace])
+                      return (False, struct:idd:leftBrace:declrsTokens ++ [rightBrace])
                     else do
                       (declrs, declrsTokens) <- multipleDeclrsParser
                       rightBrace <- rightBraceToken
-                      return (struct:idd:leftBrace:declrsTokens ++ [rightBrace]))
+                      return (False, struct:idd:leftBrace:declrsTokens ++ [rightBrace]))
 
 
 --------------------------------------------------------------------------------------------------------------
@@ -159,9 +168,9 @@ para futura execucao:
 -}
 
 -- <subprograms> -> <func> | <proc>
-subprogramsParser :: ParsecT [Token] OurState IO([Token])
+subprogramsParser :: ParsecT [Token] OurState IO(Bool, [Token])
 subprogramsParser = (do   x <- funcParser <|> procParser
-                          return x)
+                          return (False, x))
 
 
 -- <func> -> FUNC <type> ID <enclosed_args> <enclosed_blocks>
@@ -177,12 +186,16 @@ funcParser =  (do   func <- funcToken
 
                     if (isExecOn s) then do
                       s <- updateAndGetState turnExecOff
-                      enclosedBlocks <- enclosedBlocksParser
+                      (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                      if (not hasReturn) then undefined
+                      else pure()
                       s <- updateAndGetState turnExecOn
                       s <- updateAndGetState (subProgTable INSERT (getStringFromId idd, semanType, argsSeman, enclosedBlocks))
                       return (func:typee ++ idd:leftParen:args ++ rightParen:enclosedBlocks)
                     else do
-                      enclosedBlocks <- enclosedBlocksParser
+                      (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                      if (not hasReturn) then undefined
+                      else pure()
                       s <- updateAndGetState (subProgTable INSERT (getStringFromId idd, semanType, argsSeman, enclosedBlocks))
                       return (func:typee ++ idd:leftParen:args ++ rightParen:enclosedBlocks))
 
@@ -201,12 +214,12 @@ procParser =  (do   procc <- procToken
 
                     if (isExecOn s) then do
                       s <- updateAndGetState turnExecOff
-                      enclosedBlocks <- enclosedBlocksParser
+                      (_, enclosedBlocks) <- enclosedBlocksParser
                       s <- updateAndGetState turnExecOn
                       s <- updateAndGetState (subProgTable INSERT (getStringFromId idd, NULL, argsSeman, enclosedBlocks))
                       return (procc:idd:leftParen:args ++ rightParen:enclosedBlocks)
                     else do
-                      enclosedBlocks <- enclosedBlocksParser
+                      (_, enclosedBlocks) <- enclosedBlocksParser
                       s <- updateAndGetState (subProgTable INSERT (getStringFromId idd, NULL, argsSeman, enclosedBlocks))
                       return (procc:idd:leftParen:args ++ rightParen:enclosedBlocks))
 
@@ -223,22 +236,22 @@ procParser =  (do   procc <- procToken
 
 
 -- <control_structures> -> <if> | <while> | <for>
-controlStructureParser :: ParsecT [Token] OurState IO([Token])
+controlStructureParser :: ParsecT [Token] OurState IO(Bool, [Token])
 controlStructureParser =  (do   x <- whileParser <|> forParser <|> ifParser
                                 return (x))
 
 
 
 -- <while> -> WHILE <enclosed_expr> <enclosed_blocks>
-whileParser :: ParsecT [Token] OurState IO([Token])
+whileParser :: ParsecT [Token] OurState IO(Bool, [Token])
 whileParser =   (do   while <- whileToken
                       (_, enclosedExpr) <- enclosedExprParser
-                      enclosedBlock <- enclosedBlocksParser
-                      return (while:enclosedExpr ++ enclosedBlock))
+                      (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                      return (False, while:enclosedExpr ++ enclosedBlocks))
 
 
 -- <for> -> FOR LEFT_PAREN [ ( <declr> | <assignment> ) ] SEMICOLON [ <expr> ] SEMICOLON [ ( <declr> | <assignment> ) ] RIGHT_PAREN <enclosed_blocks>
-forParser :: ParsecT [Token] OurState IO([Token])
+forParser :: ParsecT [Token] OurState IO(Bool, [Token])
 forParser =   (do   for <- forToken
                     leftParen <- leftParenToken
                     maybeVarBinding1 <- (do   (_, declrs) <- declrsParser
@@ -255,46 +268,45 @@ forParser =   (do   for <- forToken
                                               assignmentsParser <|>
                                               (return [])
                     rightParen <- rightParenToken
-                    enclosedBlock <- enclosedBlocksParser
-                    return (for:leftParen:maybeVarBinding1 ++ semicolon:maybeExpr ++ semicolon:maybeVarBinding2 ++ rightParen:enclosedBlock))
+                    (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                    return (False, for:leftParen:maybeVarBinding1 ++ semicolon:maybeExpr ++ semicolon:maybeVarBinding2 ++ rightParen:enclosedBlocks))
 
 
 -- <if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
-ifParser :: ParsecT [Token] OurState IO([Token])
+ifParser :: ParsecT [Token] OurState IO(Bool, [Token])
 ifParser =  (do   iff <- ifToken
                   (exprValue, enclosedExpr) <- enclosedExprParser
-                  thenn <- thenToken
                   s <- getState
                   s <- updateAndGetState (addToScope "if")
                   if (not (isExecOn s)) then do
-                    enclosedBlock <- enclosedBlocksParser
+                    (hasReturn, enclosedBlocks) <- enclosedBlocksParser
                     s <- updateAndGetState removeFromScope
-                    maybeElse <- maybeElseParser
-                    return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse)
+                    (hasReturnElse, maybeElse) <- maybeElseParser
+                    return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
                   else do
                     if getBoolValue exprValue then do
-                      enclosedBlock <- enclosedBlocksParser
+                      (hasReturn, enclosedBlocks) <- enclosedBlocksParser
                       s <- updateAndGetState removeFromScope
                       s <- updateAndGetState turnExecOff
-                      maybeElse <- maybeElseParser
+                      (hasReturnElse, maybeElse) <- maybeElseParser
                       s <- updateAndGetState turnExecOn
-                      return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse)
+                      return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
                     else do
                       s <- updateAndGetState turnExecOff
-                      enclosedBlock <- enclosedBlocksParser
+                      (hasReturn, enclosedBlocks) <- enclosedBlocksParser
                       s <- updateAndGetState removeFromScope
                       s <- updateAndGetState turnExecOn
-                      maybeElse <- maybeElseParser
-                      return (iff:enclosedExpr ++ thenn:enclosedBlock ++ maybeElse))
+                      (hasReturnElse, maybeElse) <- maybeElseParser
+                      return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse))
 
 
-maybeElseParser :: ParsecT [Token] OurState IO([Token])
+maybeElseParser :: ParsecT [Token] OurState IO(Bool, [Token])
 maybeElseParser = (do   s <- updateAndGetState (addToScope "if")
                         elsee <- elseToken
-                        ifOrEnclosed <- ifParser <|> enclosedBlocksParser
+                        (hasReturn, ifOrEnclosed) <- ifParser <|> enclosedBlocksParser
                         s <- updateAndGetState removeFromScope
-                        return (elsee:ifOrEnclosed)) <|>
-                  (return [])
+                        return (hasReturn, elsee:ifOrEnclosed)) <|>
+                  (return (False, []))
 
 
 ----------------------------------------------------------------------------------
@@ -572,12 +584,15 @@ returnParser :: ParsecT [Token] OurState IO([Token])
 returnParser = (do  ret <- returnToken
                     (valExpr, tokenExpr) <- exprParser <|> (return (NULL, []))
 
-                    -- liftIO(print valExpr)
-
                     s <- getState
+
+
+                    
                     if (isExecOn s) then do
+                      liftIO(print ((getStringFromSubprCounter s), heapScope, valExpr))
                       s <- updateAndGetState (memTable INSERT ((getStringFromSubprCounter s), heapScope, valExpr))
                       s <- updateAndGetState turnExecOff
+
                       return (ret:tokenExpr)
                     else do return (ret:tokenExpr))
 

@@ -1,24 +1,12 @@
-func Int fib(Int x){
-  print("");
-  (x, foo, [(1,1), (2,3)])
-  if(x <= 1)then{
-    return x;
-  }else{
-    Int y;
-    return fib(x-1) + fib(x-2);
-  }
+func Int foo (Int x) {
+ // return x;
+ x := x + 1;
+ if (x > 0) {
+   return x;
+ }
+
+ return 0;
 }
 
-[
-  '$',
-  'fib/$',
-  'fib/$'
-]
 
-[(x, fib/$, [10])]
-
-
-print(fib(10));
-
-escopo ser uma pilha de escopos
-  em que o topo da pilha eh o escopo da chamda ativa
+print(foo(32));
