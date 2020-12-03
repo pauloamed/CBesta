@@ -77,9 +77,9 @@ blockParser = (do   (hasReturn, stmt) <- stmtParser
                     return (hasReturn, stmt ++ [sep])) <|>
               (do   (hasReturn, compoundStmt) <- controlStructureParser <|> subprogramsParser <|> structParser
                     return (hasReturn, compoundStmt)) <|>
-              (do   s <- updateAndGetState (addToScope "") -- entrando num novo escopo
+              (do   s <- updateAndGetState (addToCurrentScope blockScope) -- entrando num novo escopo
                     (hasReturn, enclosedBlocks) <- enclosedBlocksParser
-                    s <- updateAndGetState removeFromScope -- saindo do escopo criado
+                    s <- updateAndGetState removeFromCurrentScope -- saindo do escopo criado
                     return (hasReturn, enclosedBlocks))
 
 
@@ -102,7 +102,7 @@ stmtParser = (do  x <- continueToken <|> breakToken
                   return (False, [x])) <|>
              (do  x <- voidCommandParser <|> stmtIdParser
                   return (False, x)) <|>
-             (do  x <- returnParser 
+             (do  x <- returnParser
                   return (True, x)) <|>
              (do  derefPointer <- derefPointerParser
                   assignmentsOp <- assignmentsOpParser derefPointer
@@ -277,34 +277,39 @@ ifParser :: ParsecT [Token] OurState IO(Bool, [Token])
 ifParser =  (do   iff <- ifToken
                   (exprValue, enclosedExpr) <- enclosedExprParser
                   s <- getState
-                  s <- updateAndGetState (addToScope "if")
+                  s <- updateAndGetState (addToCurrentScope ifScope)
                   if (not (isExecOn s)) then do
                     (hasReturn, enclosedBlocks) <- enclosedBlocksParser
-                    s <- updateAndGetState removeFromScope
+                    s <- updateAndGetState removeFromCurrentScope
                     (hasReturnElse, maybeElse) <- maybeElseParser
                     return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
                   else do
                     if getBoolValue exprValue then do
                       (hasReturn, enclosedBlocks) <- enclosedBlocksParser
-                      s <- updateAndGetState removeFromScope
-                      s <- updateAndGetState turnExecOff
-                      (hasReturnElse, maybeElse) <- maybeElseParser
-                      s <- updateAndGetState turnExecOn
-                      return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
+                      s <- getState
+                      s <- updateAndGetState removeFromCurrentScope
+                      if(not(isExecOn s)) then do -- exec ficou falso durante o processametno do if
+                        (hasReturnElse, maybeElse) <- maybeElseParser
+                        return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
+                      else do
+                        s <- updateAndGetState turnExecOff
+                        (hasReturnElse, maybeElse) <- maybeElseParser
+                        s <- updateAndGetState turnExecOn
+                        return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
                     else do
                       s <- updateAndGetState turnExecOff
                       (hasReturn, enclosedBlocks) <- enclosedBlocksParser
-                      s <- updateAndGetState removeFromScope
                       s <- updateAndGetState turnExecOn
+                      s <- updateAndGetState removeFromCurrentScope
                       (hasReturnElse, maybeElse) <- maybeElseParser
                       return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse))
 
 
 maybeElseParser :: ParsecT [Token] OurState IO(Bool, [Token])
-maybeElseParser = (do   s <- updateAndGetState (addToScope "if")
+maybeElseParser = (do   s <- updateAndGetState (addToCurrentScope elseScope)
                         elsee <- elseToken
                         (hasReturn, ifOrEnclosed) <- ifParser <|> enclosedBlocksParser
-                        s <- updateAndGetState removeFromScope
+                        s <- updateAndGetState removeFromCurrentScope
                         return (hasReturn, elsee:ifOrEnclosed)) <|>
                   (return (False, []))
 
@@ -527,10 +532,14 @@ derefPointerParser = (do  star <- starToken
 processSubProgParser :: ParsecT [Token] OurState IO (Type)
 processSubProgParser = (do  _ <- enclosedBlocksParser
                             s <- getState
+
+                            -- ligando pois desligou no return
+                            s <- updateAndGetState turnExecOn
+
+                            -- recuperando valor de var temporaria referetne ao return
                             x <- (return (getValFromState ((getStringFromSubprCounter s), heapScope, NULL) s))
-                            -- liftIO (print ((getStringFromSubprCounter s), heapScope, NULL))
-                            -- liftIO (print (s))
-                            -- liftIO (print (x))
+
+                            -- removendo var temporaria referente ao return
                             s <- updateAndGetState (memTable REMOVE ((getStringFromSubprCounter s), heapScope, NULL))
                             return x)
 
@@ -547,25 +556,38 @@ funcallOpParser idd = (do   leftParen <- leftParenToken
 
                             s <- getState
                             if (isExecOn s) then do
+
+                              -- buscando na lista de subprogramas o registro do subprograma invocado
                               (retType, argsList, body) <- (return (searchForSubprogFromState (getStringFromId idd) s))
 
-                              s <- updateAndGetState (addToScope (getStringFromId idd))
+                              -- (1) adicionando uma nova instancia de escopo ativo na lista de (escopos ativos)
+                              s <- updateAndGetState (addToScopeList)
 
+                              -- (2) adicionando no escopo atual o id do supprogramda
+                              s <- updateAndGetState (addToCurrentScope (getStringFromId idd))
+
+                              -- (3) incrementando o contador de subprogramas
                               s <- updateAndGetState incrActiveSubprCounter
 
-                              -- liftIO ( print s)
+                              -- parsing e declaracao dos argumentos do subprog
                               s <- updateAndGetState (declareArgs (getScope s) argsList valArgs)
-                              -- liftIO ( print s)
 
+                              -- sobrescrevendo o fluxo de tokens restantes do parser pra processar o subpr
                               remainingTokens <- getInput
                               setInput (body ++ remainingTokens)
 
-                              returnedVal <- processSubProgParser -- CHAMADA
+                              -- chamada do subpr
+                              returnedVal <- processSubProgParser
 
+                              -- (3) decrementando o contador de subpr
                               s <- updateAndGetState decrActiveSubprCounter
 
-                              s <- updateAndGetState removeFromScope
-                              s <- updateAndGetState turnExecOn
+                              -- (2) removendo o escopo do subpr do escopo corrente
+                              s <- updateAndGetState removeFromCurrentScope
+
+                              -- (1) removendo o escopo corrente referente a essa chamada da pilha
+                              s <- updateAndGetState (removeFromScopeList)
+
                               return (returnedVal, leftParen:tokenArgs ++ [rightParen])
                             else do return (NULL, leftParen:tokenArgs ++ [rightParen]))
 
@@ -587,9 +609,8 @@ returnParser = (do  ret <- returnToken
                     s <- getState
 
 
-                    
+
                     if (isExecOn s) then do
-                      liftIO(print ((getStringFromSubprCounter s), heapScope, valExpr))
                       s <- updateAndGetState (memTable INSERT ((getStringFromSubprCounter s), heapScope, valExpr))
                       s <- updateAndGetState turnExecOff
 
@@ -769,10 +790,13 @@ assignmentsOpParser :: [Token] -> ParsecT [Token] OurState IO([Token])
 assignmentsOpParser (idd:prefix) = (do  (exprVal, assignExpr) <- assignExprParser
 
                                         s <- getState
-                                        s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
+                                        if isExecOn s then do
+                                          s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
+                                          pure ()
+                                        else do pure()
+
 
                                         remaining <- remainingAssignsParser
-
                                         return (assignExpr ++ remaining))
 
 

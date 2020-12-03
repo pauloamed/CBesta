@@ -15,11 +15,11 @@ insertSubProgTable subp []  = [subp]
 insertSubProgTable subp subProgTable = subProgTable ++ [subp]
 
 
-searchForSubprogFromState :: String -> OurState -> (Type, [(String, Type)], [Token])
+searchForSubprogFromState :: String -> OurState -> SubProgContent
 searchForSubprogFromState idd (_, subpl, _, _, _, _) = searchForSubprog idd subpl
 
 
-searchForSubprog :: String -> [SubProg] -> (Type, [(String, Type)], [Token])
+searchForSubprog :: String -> [SubProg] -> SubProgContent
 searchForSubprog idd [] = undefined
 searchForSubprog idd ((subpId, retType, args, body):subpTail) =
         if idd == subpId then (retType, args, body)

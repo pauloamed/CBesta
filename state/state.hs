@@ -14,9 +14,10 @@ import OurType
 type Var = (String, String, [(Type, Int)])
 type VarParam = (String, String, Type)
 type SubProg = (String, Type, [(String, Type)], [Token])
+type SubProgContent = (Type, [(String, Type)], [Token])
 
 -- Memoria, Funcoes, Procedimentos, Tipos e EM_EXEC
-type OurState = (([Var], Int), [SubProg], [Type], String, Bool, Int)
+type OurState = (([Var], Int), [SubProg], [Type], [String], Bool, Int)
 
 --------------------------------------------------------------------------------
 -----------------------------------  EXEC   ------------------------------------
@@ -48,6 +49,22 @@ updateAndGetState f = (do   updateState f
 
 heapScope :: String
 heapScope = "$$"
+
+
+rootScope :: String
+rootScope = "$"
+
+
+blockScope :: String
+blockScope = ""
+
+
+ifScope :: String
+ifScope = "if"
+
+
+elseScope :: String
+elseScope = "else"
 
 --------------------------------------------------------------------------------
 -------------------------------  TABLE_UTILS   ---------------------------------

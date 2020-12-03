@@ -29,16 +29,16 @@ na linha 13 de `parser.hs`
 
 
 3.12:
-  - resolver isso de escopo (1:20)
-  - returns (1:30)
   - struct recursivo (resto)
-4.12:
-  - deref pointer
-  -- recursivo, mais de uma estrela
-  - gravar valor em vetor e struct
-  -- id do lado esquerdo em geral
+  - restringir o free pra desalocar somente as variaveis alcoaadas na heap
+  - so pode chamar funcoes dentro de expressoes
   - while e for
   -- funcao recursiva para simular iteracao
+4.12:
+- gravar valor em vetor e struct
+-- id do lado esquerdo em geral
+  - deref pointer
+  -- recursivo, mais de uma estrela
 
 5 e 6.12:
   - revisao e controle de erros
@@ -52,12 +52,3 @@ na linha 13 de `parser.hs`
   --- dar erro ou retornar vazia qnd intervs invalidos sao passados?
   -- compatibilidade de tipos
   --- tamanho de array tem q ser int
-
-
-- restringir o free pra desalocar somente as variaveis alcoaadas na heap?
--- sim!
--- caso contrario, ignora ou erro
-
-- so pode chamar funcoes dentro de expressoes!
-
-- trocar escopo do if pra else
