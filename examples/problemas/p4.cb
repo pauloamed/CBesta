@@ -1,0 +1,25 @@
+struct Rational_t{
+    Int numerador, denominador;
+}
+
+func Rational_t createRat(Int a, Int b){
+    Rational_t ret;
+    ret.numerador := a;
+    ret.denominador := b;
+
+    return ret;
+}
+
+func Bool areEqual(Rational_t a, Rational_t b){
+    Int num1 := a.numerador * b.denominador;
+    Int num2 := a.denominador * b.numerador;
+
+    return ((num1 == num2));
+}
+
+Rational_t x := createRat(1, 1);
+Rational_t y := createRat(2, 2);
+Rational_t z := createRat(3, 2);
+
+print(areEqual(x, y));
+print(areEqual(x, z));

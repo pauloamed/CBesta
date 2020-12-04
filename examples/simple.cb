@@ -1,13 +1,9 @@
-struct Ae{
-  Int x;
-}
+Pointer<Int> x := alloc(Int);
+print(*x);
+read(*x);
+print(*x);
 
-struct Ao{
-  Ae e;
-}
 
-Array<10, Ao> x;
+*x := 4;
 
-x[0].e.x := 10;
-
-print(x[0].e.x);
+print(*x);

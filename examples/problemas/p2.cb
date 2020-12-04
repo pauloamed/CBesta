@@ -1,0 +1,22 @@
+Int a25, a50, a75, a100;
+
+while(true){
+    Int x; read(x);
+    if(x < 0){
+        break;
+    }else if(x <= 25){
+        a25 := a25 + 1;
+    }else if(x <= 50){
+        a50 := a50 + 1;
+    }else if(x <= 75){
+        a75 := a75 + 1;
+    }else if(x <= 100){
+        a100 := a100 + 1;
+    }
+    print("");
+}
+
+print(a25);
+print(a50);
+print(a75);
+print(a100);

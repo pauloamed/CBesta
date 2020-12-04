@@ -73,6 +73,7 @@ getAddrFromPointer (PointerType (_, (idd, sp))) = (idd, sp, NULL)
 getAddrFromPointer _ = undefined
 
 
+
 convertStringToType :: String -> Type -> Type
 convertStringToType x (IntType _) = (IntType (read x))
 convertStringToType x (DoubleType _) = (DoubleType (read x))
@@ -98,7 +99,7 @@ getDefaultValue (IntType _) = (IntType 0)
 getDefaultValue (DoubleType _) = (DoubleType 0.0)
 getDefaultValue (BoolType _) = (BoolType False)
 getDefaultValue (StringType _) = (StringType "")
-getDefaultValue _ = undefined
+getDefaultValue (StructType (idd, _)) = (StructType (idd, []))
 
 
 createSimpleType :: Token -> Type

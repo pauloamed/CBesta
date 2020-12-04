@@ -47,6 +47,7 @@ evalType (IntType x) (Star _) (IntType y) = IntType (x * y)
 evalType (DoubleType x) (Plus _) (DoubleType y) = DoubleType (x + y)
 evalType (DoubleType x) (Minus _) (DoubleType y) = DoubleType (x - y)
 evalType (DoubleType x) (Star _) (DoubleType y) = DoubleType (x * y)
+evalType (DoubleType x) (Expo _) (IntType y) = DoubleType (x ^ y)
 -- evalType (IntType x) (Expo _) (DoubleType y) = DoubleType (x ^/ y)
 evalType _ _ _ = undefined
 

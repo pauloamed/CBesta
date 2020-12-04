@@ -87,6 +87,25 @@ getVarToUpdate :: Int -> VarParam -> [Var] -> Var
 getVarToUpdate counterActive varQuery l =
   getVarFromMaxScope (filterMatchedVars varQuery ((filterOnlyActiveVars counterActive l) ++ (filterOnlyGlobals l)))
 
+
+getPointerValueFromState :: Type -> Int -> OurState -> Type
+getPointerValueFromState (PointerType x) numQueries ((l, _), _, _, _, _, _, _) =
+          getPointerValueFromList (PointerType x) numQueries l
+getPointerValueFromState _ _ _ = undefined
+
+getPointerValueFromList :: Type -> Int -> [Var] -> Type
+getPointerValueFromList (PointerType (typee, (idd, sp))) 0 l = (PointerType (typee, (idd, sp)))
+getPointerValueFromList (PointerType (typee, (idd, sp))) 1 l = getPointerValueFromListAux (idd, sp) l
+getPointerValueFromList (PointerType (typee, (idd, sp))) n l = 
+        getPointerValueFromList (getPointerValueFromListAux (idd, sp) l) (n-1) l
+  
+
+getPointerValueFromListAux :: (String, String) -> [Var] -> Type
+getPointerValueFromListAux (idA, spA) ((idB, spB, (typeHeadB, _) : tailB):tailVars) =
+                  if (idA == idB && spA == spB) then typeHeadB
+                  else getPointerValueFromListAux (idA, spA) tailVars
+getPointerValueFromListAux _ _ = undefined 
+
 --------------------------------------------------------------------------------
 ----------------------------------  FILTERS   -----------------------------------
 --------------------------------------------------------------------------------
@@ -189,11 +208,11 @@ updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs ((idB, spB, (typeHea
 
 
 getAlloc :: OurState -> Type -> Type
-getAlloc s t = (PointerType (t, (getCounterStr s, heapScope)))
+getAlloc s t = (PointerType (t, (getDecCounterStr s, heapScope)))
 
 
-getCounterStr :: OurState -> String
-getCounterStr ((l, counter), subp, t, sp, e, contSubpr, loopStack) = (show counter)
+getDecCounterStr :: OurState -> String
+getDecCounterStr ((l, counter), subp, t, sp, e, contSubpr, loopStack) = (show (counter-1))
 
 
 insertMemTable :: Int -> VarParam -> [Var] -> [Var]

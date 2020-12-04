@@ -28,12 +28,17 @@ na linha 13 de `parser.hs`
 -- guardarão (nome, retorno, args, codigo) como (String, Type, [Type], [Token])
 
 
+FALAR COM UMBERTO:
+  STRUCT RECURSIVA
+  PROBLEMA 4 TIPO RATIONAL_T (MAISCULO)
+  B != 0? (P4)
+
+
 4.12:
-- gravar valor em vetor e struct
-- struct recursivo (testar)
--- id do lado esquerdo em geral
+- struct recursivo (falar com umberto)
 - deref pointer
 -- recursivo, mais de uma estrela
+
 
 5 e 6.12:
   - revisao e controle de erros

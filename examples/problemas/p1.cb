@@ -1,0 +1,11 @@
+Double x, y;
+Int c;
+
+read(x);
+read(y);
+read(c);
+
+print(x ^ 2 - y + cast(c, Double));
+
+
+
