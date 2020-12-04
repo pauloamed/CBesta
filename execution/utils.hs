@@ -100,6 +100,7 @@ getDefaultValue (DoubleType _) = (DoubleType 0.0)
 getDefaultValue (BoolType _) = (BoolType False)
 getDefaultValue (StringType _) = (StringType "")
 getDefaultValue (StructType (idd, _)) = (StructType (idd, []))
+getDefaultValue (PointerType (typee, _)) = (PointerType (typee, ("","")))
 
 
 createSimpleType :: Token -> Type

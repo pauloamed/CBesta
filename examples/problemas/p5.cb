@@ -1,9 +1,24 @@
 proc mdc(Int n, Int m, Pointer<Int> r){
     if(m % n == 0){
-        return n;
+        *r := n;
+        return;
     }else if(n % m == 0){
-        return m;
-    }else{
-        
+        *r := m;
+        return;
+    }else if(m > n){
+        mdc (n, m % n, r);
+        return;
+    } else {
+        mdc (m, n % m, r);
+        return;
     }
 }
+
+Pointer<Int> x := alloc(Int);
+Int n, m;
+
+read(n); read (m);
+
+mdc(n, m, x);
+
+print(*x);

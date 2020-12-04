@@ -141,7 +141,8 @@ filterOnlyActiveVars x ((idA, spA, (typeA, counterA) : tailA):tailVars) =
 
 memTable :: Operation -> [AccessModifier] -> VarParam -> OurState -> OurState
 -- memTable UPDATE [] x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr l, contSubpr), subp, t, sp, e, contSubpr, loopStack)
-memTable UPDATE modfs x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr modfs l, contSubpr), subp, t, sp, e, contSubpr, loopStack)
+memTable UPDATE modfs (idd, "$$", newVal) ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTableHeap (idd, "$$", newVal) l, counter), subp, t, sp, e, contSubpr, loopStack)
+memTable UPDATE modfs x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr modfs l, counter), subp, t, sp, e, contSubpr, loopStack)
 memTable INSERT _ (_, "$$", varVal) ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable 0 ((show counter), heapScope, varVal) l, (counter + 1)), subp, t, sp, e, contSubpr, loopStack)
 memTable INSERT _ x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable contSubpr x l, counter), subp, t, sp, e, contSubpr, loopStack)
 memTable REMOVE _ x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((removeMemTable x l, counter), subp, t, sp, e, contSubpr, loopStack)
@@ -204,6 +205,13 @@ updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs ((idB, spB, (typeHea
                     else 
                       (idB, spB, (typeHeadB, counterHeadB) : valListB) : updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs l
 
+updateMemTableHeap :: VarParam -> [Var] -> [Var]
+updateMemTableHeap (idA, spA, typeA) ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
+                    if (idA == idB) && (spA == spB) then do
+                      ((idA, spA, (typeA, counterHeadB) : valListB) : l)
+                    else 
+                      (((idB, spB, (typeHeadB, counterHeadB) : valListB)) : updateMemTableHeap (idA, spA, typeA) l)
+updateMemTableHeap _ _ = undefined
 
 
 

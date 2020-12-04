@@ -677,10 +677,14 @@ derefPointerParserRead :: ParsecT [Token] OurState IO(Type, [Token])
 derefPointerParserRead = (do  stars <- many1 starToken
                               (modifiers, (idd:idTokens)) <- idParser
                               s <- getState
-                              val <- (return (getValFromValAndModifiers (getValFromState (getStringFromId idd,
-                                            getScope s, NULL) s) modifiers))
 
-                              return (getPointerValueFromState val (length stars) s, stars ++ (idd:idTokens)))
+                              if (isExecOn s) then do
+                                val <- (return (getValFromValAndModifiers (getValFromState (getStringFromId idd,
+                                              getScope s, NULL) s) modifiers))
+
+                                return (getPointerValueFromState val (length stars) s, stars ++ (idd:idTokens))
+                              else do
+                                return (NULL, stars ++ (idd:idTokens)))
 
 
 -- <deref_pointer> -> STAR <id>
@@ -688,12 +692,15 @@ derefPointerParserWrite :: ParsecT [Token] OurState IO(VarParam, [Token])
 derefPointerParserWrite = (do   stars <- many1 starToken
                                 (modifiers, (idd:idTokens)) <- idParser
                                 s <- getState
-                                val <- (return (getValFromValAndModifiers (getValFromState (getStringFromId idd,
-                                            getScope s, NULL) s) modifiers))
 
-                                pointerToTarget <- (return (getPointerValueFromState val ((length stars)-1) s))
+                                if (isExecOn s) then do
+                                  val <- (return (getValFromValAndModifiers (getValFromState (getStringFromId idd,
+                                              getScope s, NULL) s) modifiers))
 
-                                return ((getAddrFromPointer pointerToTarget), stars ++ (idd:idTokens)))
+                                  pointerToTarget <- (return (getPointerValueFromState val ((length stars)-1) s))
+                                  return ((getAddrFromPointer pointerToTarget), stars ++ (idd:idTokens))
+                                else do
+                                  return (("", "", NULL), stars ++ (idd:idTokens)))
 
 
 --------------------------------------------------------------------------------------------
@@ -715,7 +722,7 @@ processSubProgParser = (do  _ <- enclosedBlocksParser
 
 
                             -- removendo var temporaria referente ao return
-                            s <- updateAndGetState (memTable REMOVE [] ((getStringFromSubprCounter s), returnSpecialScope, NULL))
+                            -- s <- updateAndGetState (memTable REMOVE [] ((getStringFromSubprCounter s), returnSpecialScope, NULL))
                             return x)
 
 
@@ -932,11 +939,11 @@ printParser = (do printt <- printToken
                   (val, expr) <- exprParser
                   rightParen <- rightParenToken
 
-
                   s <- getState
+                  -- liftIO (print s) -- print
                   if isExecOn s then do
                       -- liftIO (print ">>>> PRINTPARSER")
-                      liftIO (print s) -- print
+                      --liftIO (print s) -- print
                       liftIO (print val) -- print
                       -- liftIO (print "<<<< PRINTPARSER")
                   else pure ()
