@@ -79,6 +79,7 @@ blockParser = (do   (hasReturn, stmt) <- stmtParser
                     return (hasReturn, compoundStmt)) <|>
               (do   s <- updateAndGetState (addToCurrentScope blockScope) -- entrando num novo escopo
                     (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                    s <- getState
                     s <- updateAndGetState removeFromCurrentScope -- saindo do escopo criado
                     return (hasReturn, enclosedBlocks))
 
@@ -98,8 +99,22 @@ enclosedBlocksParser = (do  leftBrace <- leftBraceToken
 
 -- <stmt> -> CONTINUE | BREAK | <return> | <void_command> | <declrs> | <deref_pointer> <assignments_op> | <stmt_id>
 stmtParser :: ParsecT [Token] OurState IO(Bool, [Token])
-stmtParser = (do  x <- continueToken <|> breakToken
-                  return (False, [x])) <|>
+stmtParser = (do  (flag, token) <- (do  x <- continueToken
+                                        return ("continue", x)) <|>
+                                   (do  x <- breakToken
+                                        return ("break", x))
+                  s <- getState
+
+                  if (isExecOn s) then do 
+                    if flag == "break" then do
+                      s <- updateAndGetState turnCurrLoopControlOff
+                      pure()
+                    else do pure()
+                  else do pure()
+
+                  s <- updateAndGetState turnExecOff
+
+                  return (False, [token])) <|>
              (do  x <- voidCommandParser <|> stmtIdParser
                   return (False, x)) <|>
              (do  x <- returnParser
@@ -143,7 +158,6 @@ structParser = (do  struct <- structToken
                       (declrs, declrsTokens) <- multipleDeclrsParser
                       s <- updateAndGetState turnExecOn
                       rightBrace <- rightBraceToken
-                      liftIO(print declrs)
                       s <- updateAndGetState (updateType (getStringFromId idd) declrs)
                       return (False, struct:idd:leftBrace:declrsTokens ++ [rightBrace])
                     else do
@@ -189,6 +203,7 @@ funcParser =  (do   func <- funcToken
                     if (isExecOn s) then do
                       s <- updateAndGetState turnExecOff
                       (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                      s <- getState
                       if (not hasReturn) then undefined
                       else pure()
                       s <- updateAndGetState turnExecOn
@@ -196,6 +211,7 @@ funcParser =  (do   func <- funcToken
                       return (func:typee ++ idd:leftParen:args ++ rightParen:enclosedBlocks)
                     else do
                       (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                      s <- getState
                       if (not hasReturn) then undefined
                       else pure()
                       s <- updateAndGetState (subProgTable INSERT (getStringFromId idd, semanType, argsSeman, enclosedBlocks))
@@ -252,26 +268,114 @@ whileParser =   (do   while <- whileToken
                       return (False, while:enclosedExpr ++ enclosedBlocks))
 
 
+forParserAux :: ParsecT [Token] OurState IO(([Token], [Token], [Token], [Token]), [Token])
+forParserAux = (do    pure()
+                      -------------------------------------------------------------
+                      maybeVarBinding1 <- (do   (_, declrs) <- declrsParser
+                                                return (declrs)) <|>
+                                                assignmentsParser <|>
+                                                (return [])
+                      semicolon <- separatorToken
+
+                      -------------------------------------------------------------
+                      (_, expr) <- exprParser
+
+                      semicolon <- separatorToken
+
+                      -------------------------------------------------------------
+                      maybeVarBinding2 <- (do   (_, declrs) <- declrsParser
+                                                return (declrs)) <|>
+                                                assignmentsParser <|>
+                                                (return [])
+                      rightParen <- rightParenToken
+                      -------------------------------------------------------------
+                      (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                      -------------------------------------------------------------
+
+                      return(((maybeVarBinding1,
+                              expr,
+                              maybeVarBinding2,
+                              enclosedBlocks),
+                              maybeVarBinding1 ++ semicolon:expr ++ semicolon:maybeVarBinding2 ++ rightParen:enclosedBlocks)))
+
+
+executeLoop :: ([Token], [Token], [Token], [Token]) -> ParsecT [Token] OurState IO()
+executeLoop (initBinding, condExpr, loopBinding, body) =
+  (do   s <- getState
+        s <- updateAndGetState addLoopControl
+        remainingTokens <- getInput
+        setInput (initBinding ++ remainingTokens)
+
+        _  <- (do   (_, declrs) <- declrsParser
+                    return (declrs)) <|>
+              assignmentsParser <|>
+              (return [])
+
+        loopRecursiveExecution (condExpr, loopBinding, body)
+        s <- updateAndGetState removeLoopControl
+        return ())
+
+
+loopRecursiveExecution :: ([Token], [Token], [Token]) -> ParsecT [Token] OurState IO()
+loopRecursiveExecution (condExpr, loopBinding, body) =
+    (do   remainingTokens <- getInput
+          setInput (condExpr ++ remainingTokens)
+          (condValue, _) <- exprParser
+          if ((getBoolValue condValue) == True) then do
+            remainingTokens <- getInput
+            setInput (body ++ loopBinding ++ remainingTokens)
+            _ <- enclosedBlocksParser
+            s <- getState
+
+
+            if(not (isExecOn s)) then do
+              if (getCurrLoopControl s) then do
+                s <- updateAndGetState turnExecOn
+                pure ()
+              else pure ()
+            else pure ()
+
+            -- final loop binding
+            _ <- (do  (_, declrs) <- declrsParser
+                      return (declrs)) <|>
+                      assignmentsParser <|>
+                      (return [])
+
+            s <- getState
+            if(isExecOn s) then loopRecursiveExecution (condExpr, loopBinding, body)
+            else do pure()
+          else pure()
+          return ())
+
+
+
 -- <for> -> FOR LEFT_PAREN [ ( <declr> | <assignment> ) ] SEMICOLON [ <expr> ] SEMICOLON [ ( <declr> | <assignment> ) ] RIGHT_PAREN <enclosed_blocks>
 forParser :: ParsecT [Token] OurState IO(Bool, [Token])
 forParser =   (do   for <- forToken
                     leftParen <- leftParenToken
-                    maybeVarBinding1 <- (do   (_, declrs) <- declrsParser
-                                              return (declrs)) <|>
-                                              assignmentsParser <|>
-                                              (return [])
-                    semicolon <- separatorToken
-                    maybeExpr <- (do  (_, x) <- exprParser
-                                      return x) <|>
-                                (return [])
-                    semicolon <- separatorToken
-                    maybeVarBinding2 <- (do   (_, declrs) <- declrsParser
-                                              return (declrs)) <|>
-                                              assignmentsParser <|>
-                                              (return [])
-                    rightParen <- rightParenToken
-                    (hasReturn, enclosedBlocks) <- enclosedBlocksParser
-                    return (False, for:leftParen:maybeVarBinding1 ++ semicolon:maybeExpr ++ semicolon:maybeVarBinding2 ++ rightParen:enclosedBlocks))
+
+                    s <- getState
+                    -- (1) adicionando FOR ao escopo atual
+
+                    if isExecOn s then do
+                      s <- updateAndGetState (turnExecOff)
+                      ((initBinding, condExpr, loopBinding, body), tokens) <- forParserAux
+
+                      s <- updateAndGetState (turnExecOn)
+                      s <- updateAndGetState (addToCurrentScope forScope)
+
+                      liftIO ( print ( "COMECANDO O FOR"))
+                      executeLoop (initBinding, condExpr, loopBinding, body)
+
+                      s <- updateAndGetState (removeFromCurrentScope)
+                      
+                      return (False, for:leftParen:tokens)
+                    else do
+                      (_, tokens) <- forParserAux
+                      return (False, for:leftParen:tokens))
+
+
+                    -- (1) removendo FOR do escopo atual
 
 
 -- <if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
@@ -282,6 +386,7 @@ ifParser =  (do   iff <- ifToken
                   s <- updateAndGetState (addToCurrentScope ifScope)
                   if (not (isExecOn s)) then do
                     (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                    s <- getState
                     s <- updateAndGetState removeFromCurrentScope
                     (hasReturnElse, maybeElse) <- maybeElseParser
                     return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
@@ -301,6 +406,7 @@ ifParser =  (do   iff <- ifToken
                     else do
                       s <- updateAndGetState turnExecOff
                       (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                      s <- getState
                       s <- updateAndGetState turnExecOn
                       s <- updateAndGetState removeFromCurrentScope
                       (hasReturnElse, maybeElse) <- maybeElseParser
@@ -311,6 +417,7 @@ maybeElseParser :: ParsecT [Token] OurState IO(Bool, [Token])
 maybeElseParser = (do   s <- updateAndGetState (addToCurrentScope elseScope)
                         elsee <- elseToken
                         (hasReturn, ifOrEnclosed) <- ifParser <|> enclosedBlocksParser
+                        s <- getState
                         s <- updateAndGetState removeFromCurrentScope
                         return (hasReturn, elsee:ifOrEnclosed)) <|>
                   (return (False, []))
@@ -479,8 +586,6 @@ valueIdOpParser idd = (do   (returnedVal, tokens) <- funcallOpParser idd
                             return (returnedVal, tokens)) <|>
                       (do   (modifiers, tokens) <- accessModifierOpParser
                             s <- getState
-
-                            -- liftIO (print (getStringFromId idd, getScope s, NULL))
 
                             return (getValFromValAndModifiers (getValFromState (getStringFromId idd, getScope s, NULL) s) modifiers,
                                      tokens))
@@ -744,10 +849,10 @@ printParser = (do printt <- printToken
 
                   s <- getState
                   if isExecOn s then do
-                      liftIO (print ">>>> PRINTPARSER")
-                      liftIO (print s)
+                      -- liftIO (print ">>>> PRINTPARSER")
+                      -- liftIO (print s)
                       liftIO (print val)
-                      liftIO (print "<<<< PRINTPARSER")
+                      -- liftIO (print "<<<< PRINTPARSER")
                   else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))
@@ -760,12 +865,15 @@ readParser = (do  readd <- readToken
                   (idd:val) <- idParser <|> derefPointerParser -- TODO
                   rightParen <- rightParenToken
 
-                  readVal <- liftIO (getLine)
                   s <- getState
 
-                  s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, convertStringToType readVal (getValFromState (getStringFromId idd, getScope s, NULL) s)))
+                  if(isExecOn s) then do
+                    readVal <- liftIO (getLine)
+                    s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, convertStringToType readVal (getValFromState (getStringFromId idd, getScope s, NULL) s)))
+                    pure ()
+                  else pure ()
 
-                  return (readd:leftParen:val ++ [rightParen]))
+                  return (readd:leftParen:idd:val ++ [rightParen]))
 
 
 
@@ -808,7 +916,10 @@ assignmentParser = (do  (idd:x) <- idParser <|> derefPointerParser
                         (exprVal, assignExpr) <- assignExprParser
 
                         s <- getState
-                        s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
+                        if(isExecOn s) then do
+                          s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
+                          pure ()
+                        else do pure ()
 
                         return ((idd:x) ++ assignExpr))
 

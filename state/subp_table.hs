@@ -6,7 +6,7 @@ import OurType
 import Lexer
 
 subProgTable :: Operation -> SubProg -> OurState -> OurState
-subProgTable INSERT subp (v, subpl, t, sp, e, contSubpr) = (v, insertSubProgTable subp subpl, t, sp, e, contSubpr)
+subProgTable INSERT subp (v, subpl, t, sp, e, contSubpr, loopStack) = (v, insertSubProgTable subp subpl, t, sp, e, contSubpr, loopStack)
 subProgTable _ _ _ = undefined
 
 
@@ -16,7 +16,7 @@ insertSubProgTable subp subProgTable = subProgTable ++ [subp]
 
 
 searchForSubprogFromState :: String -> OurState -> SubProgContent
-searchForSubprogFromState idd (_, subpl, _, _, _, _) = searchForSubprog idd subpl
+searchForSubprogFromState idd (_, subpl, _, _, _, _, _) = searchForSubprog idd subpl
 
 
 searchForSubprog :: String -> [SubProg] -> SubProgContent
@@ -27,12 +27,12 @@ searchForSubprog idd ((subpId, retType, args, body):subpTail) =
 
 
 incrActiveSubprCounter :: OurState -> OurState
-incrActiveSubprCounter (v, subpl, t, sp, e, contSubpr) = (v, subpl, t, sp, e, contSubpr + 1)
+incrActiveSubprCounter (v, subpl, t, sp, e, contSubpr, loopStack) = (v, subpl, t, sp, e, contSubpr + 1, loopStack)
 
 
 decrActiveSubprCounter :: OurState -> OurState
-decrActiveSubprCounter (v, subpl, t, sp, e, contSubpr) = (v, subpl, t, sp, e, contSubpr - 1)
+decrActiveSubprCounter (v, subpl, t, sp, e, contSubpr, loopStack) = (v, subpl, t, sp, e, contSubpr - 1, loopStack)
 
 
 getStringFromSubprCounter :: OurState -> String
-getStringFromSubprCounter (_, _, _, _, _, contSubpr) = (show contSubpr)
+getStringFromSubprCounter (_, _, _, _, _, contSubpr, _) = (show contSubpr)

@@ -1,8 +1,14 @@
-struct Legal {
-  Legal x;
-  Int y;
+proc foo(Int x){
+  print(x * x);
 }
 
-Legal alo;
+Int x;
+for(;true;){
+  read(x);
 
-print (alo.y);
+  foo(x);
+
+  if(x == 0){
+    break;
+  }
+}

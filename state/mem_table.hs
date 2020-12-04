@@ -16,23 +16,23 @@ import Control.Monad.IO.Class
 
 
 addToScopeList :: OurState -> OurState
-addToScopeList (v, subp, tl, tailSp, e, contSubpr) = (v, subp, tl, ((rootScope):tailSp), e, contSubpr)
+addToScopeList (v, subp, tl, tailSp, e, contSubpr, loopStack) = (v, subp, tl, ((rootScope):tailSp), e, contSubpr, loopStack)
 
 
 removeFromScopeList :: OurState -> OurState
-removeFromScopeList (v, subp, tl, (sp:tailSp), e, contSubpr) = (v, subp, tl, tailSp, e, contSubpr)
+removeFromScopeList (v, subp, tl, (sp:tailSp), e, contSubpr, loopStack) = (v, subp, tl, tailSp, e, contSubpr, loopStack)
 
 
 addToCurrentScope :: String -> OurState -> OurState
-addToCurrentScope x (v, subp, tl, (sp:tailSp), e, contSubpr) = (v, subp, tl, ((x ++ "/" ++ sp):tailSp), e, contSubpr)
+addToCurrentScope x (v, subp, tl, (sp:tailSp), e, contSubpr, loopStack) = (v, subp, tl, ((x ++ "/" ++ sp):tailSp), e, contSubpr, loopStack)
 
 
 removeFromCurrentScope :: OurState -> OurState
-removeFromCurrentScope ((v, heapCounter), subp, tl, (sp:tailSp), e, contSubpr) = ((removeScopeFromMemTable sp v, heapCounter), subp, tl, ((removeScopeHead sp):tailSp), e, contSubpr)
+removeFromCurrentScope ((v, heapCounter), subp, tl, (sp:tailSp), e, contSubpr, loopStack) = ((removeScopeFromMemTable sp v, heapCounter), subp, tl, ((removeScopeHead sp):tailSp), e, contSubpr, loopStack)
 
 
 getScope :: OurState -> String
-getScope (_, _, _, (sp:tailSp), _, _) = sp
+getScope (_, _, _, (sp:tailSp), _, _, _) = sp
 
 
 removeScopeHead :: String -> String
@@ -54,7 +54,7 @@ isSuffixOf s (hx:tx) =
 
 
 getValFromState :: VarParam -> OurState -> Type
-getValFromState x ((l, _), _, _, _, _, _) = (getTypeFromVar (getVarFromMaxScope (filterMatchedVars x l)))
+getValFromState x ((l, _), _, _, _, _, _, _) = (getTypeFromVar (getVarFromMaxScope (filterMatchedVars x l)))
 
 
 getTypeFromVar :: Var -> Type
@@ -72,7 +72,7 @@ getVarFromMaxScope ((idA, spA, headA : tailA):(idB, spB, headB : tailB):tailVars
 
 
 getAddrFromIdFromState :: String -> OurState -> Type -- (pointerType)
-getAddrFromIdFromState idd ((v, _), _, _, _, _, _) = getAddrFromIdFromMemTable idd v
+getAddrFromIdFromState idd ((v, _), _, _, _, _, _, _) = getAddrFromIdFromMemTable idd v
 
 
 -- tem que ter controle de escopo, nao ta tendo
@@ -120,14 +120,14 @@ filterOnlyActiveVars x ((idA, spA, (typeA, counterA) : tailA):tailVars) =
 
 
 memTable :: Operation -> VarParam -> OurState -> OurState
-memTable UPDATE x ((l, counter), subp, t, sp, e, contSubpr) = ((updateMemTable x contSubpr l, contSubpr), subp, t, sp, e, contSubpr)
-memTable INSERT (_, "heap", varVal) ((l, counter), subp, t, sp, e, contSubpr) = ((insertMemTable 0 ((show counter), "heap", varVal) l, (counter + 1)), subp, t, sp, e, contSubpr)
-memTable INSERT x ((l, counter), subp, t, sp, e, contSubpr) = ((insertMemTable contSubpr x l, counter), subp, t, sp, e, contSubpr)
-memTable REMOVE x ((l, counter), subp, t, sp, e, contSubpr) = ((removeMemTable x l, counter), subp, t, sp, e, contSubpr)
+memTable UPDATE x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr l, contSubpr), subp, t, sp, e, contSubpr, loopStack)
+memTable INSERT (_, "heap", varVal) ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable 0 ((show counter), "heap", varVal) l, (counter + 1)), subp, t, sp, e, contSubpr, loopStack)
+memTable INSERT x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable contSubpr x l, counter), subp, t, sp, e, contSubpr, loopStack)
+memTable REMOVE x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((removeMemTable x l, counter), subp, t, sp, e, contSubpr, loopStack)
 
 
 getVarToUpdateTest :: VarParam -> OurState -> Var
-getVarToUpdateTest x ((l, counter), subp, t, sp, e, contSubpr) = (getVarToUpdate contSubpr x l)
+getVarToUpdateTest x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = (getVarToUpdate contSubpr x l)
 
 -- 1.filtrar somente as vars globais ou da minha ativacao
 -- 2.filtrar somente as vars que dividem escopo comigo
@@ -149,7 +149,7 @@ getAlloc s t = (PointerType (t, (getCounterStr s, "heap")))
 
 
 getCounterStr :: OurState -> String
-getCounterStr ((l, counter), subp, t, sp, e, contSubpr) = (show counter)
+getCounterStr ((l, counter), subp, t, sp, e, contSubpr, loopStack) = (show counter)
 
 
 insertMemTable :: Int -> VarParam -> [Var] -> [Var]
