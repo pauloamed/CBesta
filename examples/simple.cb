@@ -1,14 +1,13 @@
-proc foo(Int x){
-  print(x * x);
+func Int foo (Int a) {
+  Int x;
+  return 0;
 }
 
-Int x;
-for(;true;){
-  read(x);
-
-  foo(x);
-
-  if(x == 0){
-    break;
-  }
+proc faa () {
+  print("sei la");
 }
+
+
+
+
+// print (faa());

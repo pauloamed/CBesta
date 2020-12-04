@@ -80,6 +80,7 @@ getAddrFromIdFromMemTable :: String -> [Var] -> Type -- (pointerType)
 getAddrFromIdFromMemTable idA ((idB, spB, (typeHeadB, _) : tailB):tailVars) =
                   if (idA == idB) then (PointerType (typeHeadB, (idB, spB)))
                   else getAddrFromIdFromMemTable idA tailVars
+getAddrFromIdFromMemTable _ _ = undefined
 
 
 getVarToUpdate :: Int -> VarParam -> [Var] -> Var
@@ -121,7 +122,7 @@ filterOnlyActiveVars x ((idA, spA, (typeA, counterA) : tailA):tailVars) =
 
 memTable :: Operation -> VarParam -> OurState -> OurState
 memTable UPDATE x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr l, contSubpr), subp, t, sp, e, contSubpr, loopStack)
-memTable INSERT (_, "heap", varVal) ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable 0 ((show counter), "heap", varVal) l, (counter + 1)), subp, t, sp, e, contSubpr, loopStack)
+memTable INSERT (_, "$$", varVal) ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable 0 ((show counter), heapScope, varVal) l, (counter + 1)), subp, t, sp, e, contSubpr, loopStack)
 memTable INSERT x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable contSubpr x l, counter), subp, t, sp, e, contSubpr, loopStack)
 memTable REMOVE x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((removeMemTable x l, counter), subp, t, sp, e, contSubpr, loopStack)
 
@@ -145,7 +146,7 @@ updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) ((idB, spB, (typeHeadB, co
 
 
 getAlloc :: OurState -> Type -> Type
-getAlloc s t = (PointerType (t, (getCounterStr s, "heap")))
+getAlloc s t = (PointerType (t, (getCounterStr s, heapScope)))
 
 
 getCounterStr :: OurState -> String

@@ -29,10 +29,7 @@ na linha 13 de `parser.hs`
 
 
 3.12:
-  - restringir o free pra desalocar somente as variaveis alcoaadas na heap
   - so pode chamar funcoes dentro de expressoes
-  - while e for
-  -- funcao recursiva para simular iteracao
 4.12:
 - gravar valor em vetor e struct
 - struct recursivo (testar)

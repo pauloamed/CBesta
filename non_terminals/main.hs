@@ -132,7 +132,7 @@ stmtIdParser = (do  idd <- idToken -- aqui eh escrita
                     assignmentOrFuncall <- (do  maybeIndex <- (return []) -- TODO
                                                 assignment <- assignmentsOpParser (idd:maybeIndex)
                                                 return (maybeIndex ++ assignment)) <|>
-                                            (do (_, tokens) <- funcallOpParser idd
+                                            (do (_, tokens) <- funcallOpParser idd "stmt"
                                                 return tokens)
                     return (idd:assignmentOrFuncall))
 
@@ -263,9 +263,25 @@ controlStructureParser =  (do   x <- whileParser <|> forParser <|> ifParser
 -- <while> -> WHILE <enclosed_expr> <enclosed_blocks>
 whileParser :: ParsecT [Token] OurState IO(Bool, [Token])
 whileParser =   (do   while <- whileToken
-                      (_, enclosedExpr) <- enclosedExprParser
-                      (hasReturn, enclosedBlocks) <- enclosedBlocksParser
-                      return (False, while:enclosedExpr ++ enclosedBlocks))
+
+                      s <- getState
+
+                      if (isExecOn s) then do
+                        s <- updateAndGetState (turnExecOff)
+
+                        (_, enclosedExpr) <- enclosedExprParser
+                        (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+
+                        s <- updateAndGetState (turnExecOn)
+                        s <- updateAndGetState (addToCurrentScope whileScope)
+
+                        s <- updateAndGetState addLoopControl
+                        executeLoop([], enclosedExpr, [], enclosedBlocks)
+                        return (False, while:enclosedExpr ++ enclosedBlocks)
+                      else do
+                        (_, enclosedExpr) <- enclosedExprParser
+                        (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                        return (False, while:enclosedExpr ++ enclosedBlocks))
 
 
 forParserAux :: ParsecT [Token] OurState IO(([Token], [Token], [Token], [Token]), [Token])
@@ -582,7 +598,7 @@ literalParser = (do   x <- intLitToken <|> boolLitToken <|> doubleLitToken <|> s
 
 
 valueIdOpParser :: Token -> ParsecT [Token] OurState IO(Type, [Token])
-valueIdOpParser idd = (do   (returnedVal, tokens) <- funcallOpParser idd
+valueIdOpParser idd = (do   (returnedVal, tokens) <- funcallOpParser idd "expr"
                             return (returnedVal, tokens)) <|>
                       (do   (modifiers, tokens) <- accessModifierOpParser
                             s <- getState
@@ -643,6 +659,7 @@ processSubProgParser = (do  _ <- enclosedBlocksParser
                             -- ligando pois desligou no return
                             s <- updateAndGetState turnExecOn
 
+                            liftIO(print s)
                             -- recuperando valor de var temporaria referetne ao return
                             x <- (return (getValFromState ((getStringFromSubprCounter s), heapScope, NULL) s))
 
@@ -652,51 +669,58 @@ processSubProgParser = (do  _ <- enclosedBlocksParser
 
 
 -- <funcall_op> -> LEFT_PARENT <funcall_args> RIGHT_PARENT
-funcallOpParser :: Token -> ParsecT [Token] OurState IO(Type, [Token])
-funcallOpParser idd = (do   leftParen <- leftParenToken
-                            (valArgs, tokenArgs) <- (do   (valExpr, tokensExpr) <- exprParser
-                                                          (tailVals, tailTokens) <- funcallArgsParser
-                                                          return ((valExpr:tailVals), tokensExpr ++ tailTokens)) <|>
-                                                    (return ([], []))
-                            rightParen <- rightParenToken
+funcallOpParser :: Token -> String -> ParsecT [Token] OurState IO(Type, [Token])
+funcallOpParser idd  parent = (do   leftParen <- leftParenToken
+                                    (valArgs, tokenArgs) <- (do   (valExpr, tokensExpr) <- exprParser
+                                                                  (tailVals, tailTokens) <- funcallArgsParser
+                                                                  return ((valExpr:tailVals), tokensExpr ++ tailTokens)) <|>
+                                                            (return ([], []))
+                                    rightParen <- rightParenToken
 
 
-                            s <- getState
-                            if (isExecOn s) then do
+                                    s <- getState
+                                    liftIO(print s)
+                                    if (isExecOn s) then do
 
-                              -- buscando na lista de subprogramas o registro do subprograma invocado
-                              (retType, argsList, body) <- (return (searchForSubprogFromState (getStringFromId idd) s))
+                                      -- buscando na lista de subprogramas o registro do subprograma invocado
+                                      (retType, argsList, body) <- (return (searchForSubprogFromState (getStringFromId idd) s))
 
-                              -- (1) adicionando uma nova instancia de escopo ativo na lista de (escopos ativos)
-                              s <- updateAndGetState (addToScopeList)
+                                      if ((parent == "expr") && (retType == NULL)) then do
+                                        undefined
+                                      else if ((parent == "stmt") && (retType /= NULL)) then do
+                                        undefined
+                                      else do pure ()
 
-                              -- (2) adicionando no escopo atual o id do supprogramda
-                              s <- updateAndGetState (addToCurrentScope (getStringFromId idd))
+                                      -- (1) adicionando uma nova instancia de escopo ativo na lista de (escopos ativos)
+                                      s <- updateAndGetState (addToScopeList)
 
-                              -- (3) incrementando o contador de subprogramas
-                              s <- updateAndGetState incrActiveSubprCounter
+                                      -- (2) adicionando no escopo atual o id do supprogramda
+                                      s <- updateAndGetState (addToCurrentScope (getStringFromId idd))
 
-                              -- parsing e declaracao dos argumentos do subprog
-                              s <- updateAndGetState (declareArgs (getScope s) argsList valArgs)
+                                      -- (3) incrementando o contador de subprogramas
+                                      s <- updateAndGetState incrActiveSubprCounter
 
-                              -- sobrescrevendo o fluxo de tokens restantes do parser pra processar o subpr
-                              remainingTokens <- getInput
-                              setInput (body ++ remainingTokens)
+                                      -- parsing e declaracao dos argumentos do subprog
+                                      s <- updateAndGetState (declareArgs (getScope s) argsList valArgs)
 
-                              -- chamada do subpr
-                              returnedVal <- processSubProgParser
+                                      -- sobrescrevendo o fluxo de tokens restantes do parser pra processar o subpr
+                                      remainingTokens <- getInput
+                                      setInput (body ++ remainingTokens)
 
-                              -- (3) decrementando o contador de subpr
-                              s <- updateAndGetState decrActiveSubprCounter
+                                      -- chamada do subpr
+                                      returnedVal <- processSubProgParser
 
-                              -- (2) removendo o escopo do subpr do escopo corrente
-                              s <- updateAndGetState removeFromCurrentScope
+                                      -- (3) decrementando o contador de subpr
+                                      s <- updateAndGetState decrActiveSubprCounter
 
-                              -- (1) removendo o escopo corrente referente a essa chamada da pilha
-                              s <- updateAndGetState (removeFromScopeList)
+                                      -- (2) removendo o escopo do subpr do escopo corrente
+                                      s <- updateAndGetState removeFromCurrentScope
 
-                              return (returnedVal, leftParen:tokenArgs ++ [rightParen])
-                            else do return (NULL, leftParen:tokenArgs ++ [rightParen]))
+                                      -- (1) removendo o escopo corrente referente a essa chamada da pilha
+                                      s <- updateAndGetState (removeFromScopeList)
+
+                                      return (returnedVal, leftParen:tokenArgs ++ [rightParen])
+                                    else do return (NULL, leftParen:tokenArgs ++ [rightParen]))
 
 
 
@@ -773,7 +797,10 @@ allocParser = (do   alloc <- allocToken
                     rp <- rightParenToken
 
                     s <- getState
-                    s <- updateAndGetState (memTable INSERT ("", "heap", semanType))
+                    s <- updateAndGetState (memTable INSERT ("", heapScope, semanType))
+
+
+                    liftIO(print s)
 
                     return (getAlloc s semanType, alloc:lp:tokenType ++ [rp]))
 
@@ -835,7 +862,17 @@ freeParser = (do  free <- freeToken
                   -- exprVal tem que ser do tipo PointerType(tipo, id, escopo)
                   -- se nao for da merda...
                   -- remover (id, escopo) de memtable
-                  s <- updateAndGetState(memTable REMOVE (getAddrFromPointer exprVal))
+                  (idd, sp, x) <- (return (getAddrFromPointer exprVal))
+
+                  s <- getState
+
+                  if (sp == heapScope) then do
+                    s <- updateAndGetState(memTable REMOVE (idd, sp, x))
+                    pure ()
+                  else do
+                    undefined
+                    pure ()
+
                   return (free:exprTokens))
 
 
