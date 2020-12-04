@@ -28,14 +28,12 @@ na linha 13 de `parser.hs`
 -- guardarão (nome, retorno, args, codigo) como (String, Type, [Type], [Token])
 
 
-3.12:
-  - so pode chamar funcoes dentro de expressoes
 4.12:
 - gravar valor em vetor e struct
 - struct recursivo (testar)
 -- id do lado esquerdo em geral
-  - deref pointer
-  -- recursivo, mais de uma estrela
+- deref pointer
+-- recursivo, mais de uma estrela
 
 5 e 6.12:
   - revisao e controle de erros

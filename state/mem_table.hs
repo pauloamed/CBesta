@@ -120,11 +120,51 @@ filterOnlyActiveVars x ((idA, spA, (typeA, counterA) : tailA):tailVars) =
 --------------------------------------------------------------------------------
 
 
-memTable :: Operation -> VarParam -> OurState -> OurState
-memTable UPDATE x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr l, contSubpr), subp, t, sp, e, contSubpr, loopStack)
-memTable INSERT (_, "$$", varVal) ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable 0 ((show counter), heapScope, varVal) l, (counter + 1)), subp, t, sp, e, contSubpr, loopStack)
-memTable INSERT x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable contSubpr x l, counter), subp, t, sp, e, contSubpr, loopStack)
-memTable REMOVE x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((removeMemTable x l, counter), subp, t, sp, e, contSubpr, loopStack)
+memTable :: Operation -> [AccessModifier] -> VarParam -> OurState -> OurState
+-- memTable UPDATE [] x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr l, contSubpr), subp, t, sp, e, contSubpr, loopStack)
+memTable UPDATE modfs x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr modfs l, contSubpr), subp, t, sp, e, contSubpr, loopStack)
+memTable INSERT _ (_, "$$", varVal) ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable 0 ((show counter), heapScope, varVal) l, (counter + 1)), subp, t, sp, e, contSubpr, loopStack)
+memTable INSERT _ x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable contSubpr x l, counter), subp, t, sp, e, contSubpr, loopStack)
+memTable REMOVE _ x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((removeMemTable x l, counter), subp, t, sp, e, contSubpr, loopStack)
+
+-- StructType (String, [(String, Type)]) | -- nome seguido de uma lista de nomes e Types (tipo + valor) |
+-- ArrayType (Int, [Type])
+
+
+updateArrayElementsList :: [Type] -> [AccessModifier] -> Type -> [Type]
+updateArrayElementsList (typesHead:typesTail) ((ArrayAM index):tailModf) newVal = 
+  if (index == 0) then do
+    if (tailModf == []) then do (newVal:typesTail)
+    else ((updateUserType typesHead tailModf newVal) : typesTail)
+  else (typesHead:(updateArrayElementsList (typesTail) ((ArrayAM (index-1)):tailModf) newVal))
+
+
+updateStructFieldsList :: [(String, Type)] -> [AccessModifier] -> Type -> [(String, Type)]
+updateStructFieldsList [] ((StructAM fieldName):tailModf) newVal = undefined
+updateStructFieldsList ((currFieldName, currFieldVal):fieldsTail) ((StructAM fieldName):tailModf) newVal = 
+  if (currFieldName == fieldName) then do
+    if (tailModf == []) then do ((fieldName, newVal):fieldsTail)
+    else ((fieldName, (updateUserType currFieldVal tailModf newVal)) : fieldsTail)
+  else ((currFieldName, currFieldVal):(updateStructFieldsList (fieldsTail) ((StructAM fieldName):tailModf) newVal))
+
+
+updateArray :: Type -> [AccessModifier] -> Type -> Type
+updateArray (ArrayType (size, elements)) ((ArrayAM index):tailModf) newVal =
+    (ArrayType (size, updateArrayElementsList elements ((ArrayAM index):tailModf) newVal))
+updateArray _ _ _ = undefined
+
+
+
+updateStruct :: Type -> [AccessModifier] -> Type -> Type
+updateStruct (StructType (idd, fields)) ((StructAM fieldName):tailModf) newVal =
+    (StructType (idd, updateStructFieldsList fields ((StructAM fieldName):tailModf) newVal))
+updateStruct _ _ _ = undefined
+
+updateUserType :: Type -> [AccessModifier] -> Type -> Type
+updateUserType (StructType (idd, fields)) modfs newVal = updateStruct (StructType (idd, fields)) modfs newVal
+updateUserType (ArrayType (size, elements)) modfs newVal = updateArray (ArrayType (size, elements)) modfs newVal
+updateUserType _ _ _ = undefined
+
 
 
 getVarToUpdateTest :: VarParam -> OurState -> Var
@@ -132,15 +172,18 @@ getVarToUpdateTest x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = (get
 
 -- 1.filtrar somente as vars globais ou da minha ativacao
 -- 2.filtrar somente as vars que dividem escopo comigo
-updateMemTable :: VarParam -> Int -> [Var] -> [Var]
-updateMemTable x counterActive l = updateMemTableAux x (getVarToUpdate counterActive x l) l
+updateMemTable :: VarParam -> Int -> [AccessModifier] -> [Var] -> [Var]
+updateMemTable x counterActive modfs l = updateMemTableAux x (getVarToUpdate counterActive x l) modfs l
 
 
-updateMemTableAux :: VarParam -> Var -> [Var] -> [Var]
-updateMemTableAux _ _ [] = undefined
-updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
-                    if (idVar == idB) && (spVar == spB) then (idVar, spVar, (typeA, counterHeadB) : valListB) : l
-                    else (idB, spB, (typeHeadB, counterHeadB) : valListB) : updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) l
+updateMemTableAux :: VarParam -> Var -> [AccessModifier] -> [Var] -> [Var]
+updateMemTableAux _ _ _ [] = undefined
+updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
+                    if (idVar == idB) && (spVar == spB) then 
+                      if (modfs == []) then (idVar, spVar, (typeA, counterHeadB) : valListB) : l
+                      else (idVar, spVar, (updateUserType typeHeadB modfs typeA, counterHeadB) : valListB) : l
+                    else 
+                      (idB, spB, (typeHeadB, counterHeadB) : valListB) : updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs l
 
 
 
@@ -184,3 +227,4 @@ removeScopeFromMemTable spA ((idB, spB, x : valListB) : l) =
                         if (valListB == []) then removeScopeFromMemTable spA l
                         else do (idB, spB, valListB) : removeScopeFromMemTable spA l
                     else (idB, spB, x : valListB) : removeScopeFromMemTable spA l
+

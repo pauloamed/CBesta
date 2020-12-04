@@ -119,19 +119,19 @@ stmtParser = (do  (flag, token) <- (do  x <- continueToken
                   return (False, x)) <|>
              (do  x <- returnParser
                   return (True, x)) <|>
-             (do  derefPointer <- derefPointerParser
-                  assignmentsOp <- assignmentsOpParser derefPointer
+             (do  (x:derefPointer) <- derefPointerParser -- TODO
+                  assignmentsOp <- assignmentsOpParser x []
                   return (False, (derefPointer ++ assignmentsOp))) <|>
              (do  (_, declrs) <- declrsParser
                   return (False, declrs))
 
 
--- <stmt_id> -> ID ([<index_op>] <assignments_op> | <funcall_op>)
+-- <stmt_id> -> ID (<access_modf_op> <assignments_op> | <funcall_op>)
 stmtIdParser :: ParsecT [Token] OurState IO([Token])
 stmtIdParser = (do  idd <- idToken -- aqui eh escrita
-                    assignmentOrFuncall <- (do  maybeIndex <- (return []) -- TODO
-                                                assignment <- assignmentsOpParser (idd:maybeIndex)
-                                                return (maybeIndex ++ assignment)) <|>
+                    assignmentOrFuncall <- (do  (maybeAccessModf, accessTokens) <- accessModifierOpParser
+                                                assignment <- assignmentsOpParser idd maybeAccessModf
+                                                return (accessTokens ++ assignment)) <|>
                                             (do (_, tokens) <- funcallOpParser idd "stmt"
                                                 return tokens)
                     return (idd:assignmentOrFuncall))
@@ -657,13 +657,13 @@ processSubProgParser = (do  _ <- enclosedBlocksParser
                             -- ligando pois desligou no return
                             s <- updateAndGetState turnExecOn
 
-                            liftIO(print s) -- process sub
+                            -- liftIO(print s) -- process sub
                             -- recuperando valor de var temporaria referetne ao return
                             x <- (return (getValFromState ((getStringFromSubprCounter s), returnSpecialScope, NULL) s))
 
 
                             -- removendo var temporaria referente ao return
-                            s <- updateAndGetState (memTable REMOVE ((getStringFromSubprCounter s), returnSpecialScope, NULL))
+                            s <- updateAndGetState (memTable REMOVE [] ((getStringFromSubprCounter s), returnSpecialScope, NULL))
                             return x)
 
 
@@ -678,7 +678,7 @@ funcallOpParser idd  parent = (do   leftParen <- leftParenToken
 
 
                                     s <- getState
-                                    liftIO(print s) -- funcall
+                                    -- liftIO(print s) -- funcall
                                     if (isExecOn s) then do
 
                                       -- buscando na lista de subprogramas o registro do subprograma invocado
@@ -741,7 +741,7 @@ returnParser = (do  ret <- returnToken
 
 
                     if (isExecOn s) then do
-                      s <- updateAndGetState (memTable INSERT ((getStringFromSubprCounter s), returnSpecialScope, valExpr))
+                      s <- updateAndGetState (memTable INSERT [] ((getStringFromSubprCounter s), returnSpecialScope, valExpr))
                       s <- updateAndGetState turnExecOff
 
                       return (ret:tokenExpr)
@@ -796,7 +796,7 @@ allocParser = (do   alloc <- allocToken
                     rp <- rightParenToken
 
                     s <- getState
-                    s <- updateAndGetState (memTable INSERT ("", heapScope, semanType))
+                    s <- updateAndGetState (memTable INSERT [] ("", heapScope, semanType))
 
 
                     return (getAlloc s semanType, alloc:lp:tokenType ++ [rp]))
@@ -864,7 +864,7 @@ freeParser = (do  free <- freeToken
                   s <- getState
 
                   if (sp == heapScope) then do
-                    s <- updateAndGetState(memTable REMOVE (idd, sp, x))
+                    s <- updateAndGetState(memTable REMOVE [] (idd, sp, x))
                     pure ()
                   else do
                     undefined
@@ -883,10 +883,10 @@ printParser = (do printt <- printToken
 
                   s <- getState
                   if isExecOn s then do
-                      liftIO (print ">>>> PRINTPARSER")
+                      -- liftIO (print ">>>> PRINTPARSER")
                       liftIO (print s) -- print
                       liftIO (print val) -- print
-                      liftIO (print "<<<< PRINTPARSER")
+                      -- liftIO (print "<<<< PRINTPARSER")
                   else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))
@@ -903,7 +903,7 @@ readParser = (do  readd <- readToken
 
                   if(isExecOn s) then do
                     readVal <- liftIO (getLine)
-                    s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, convertStringToType readVal (getValFromState (getStringFromId idd, getScope s, NULL) s)))
+                    s <- updateAndGetState(memTable UPDATE [] (getStringFromId idd, getScope s, convertStringToType readVal (getValFromState (getStringFromId idd, getScope s, NULL) s)))
                     pure ()
                   else pure ()
 
@@ -929,19 +929,20 @@ assignmentsParser = (do   assignment <- assignmentParser
                           return (assignment ++ remaining))
 
 
+
 -- <assignments_op> -> <assign_expr> <remaining_assign>
-assignmentsOpParser :: [Token] -> ParsecT [Token] OurState IO([Token])
-assignmentsOpParser (idd:prefix) = (do  (exprVal, assignExpr) <- assignExprParser
+assignmentsOpParser :: Token -> [AccessModifier] -> ParsecT [Token] OurState IO([Token])
+assignmentsOpParser idd modifiers = (do   (exprVal, assignExpr) <- assignExprParser
 
-                                        s <- getState
-                                        if isExecOn s then do
-                                          s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
-                                          pure ()
-                                        else do pure()
+                                          s <- getState
+                                          if isExecOn s then do
+                                            s <- updateAndGetState(memTable UPDATE modifiers (getStringFromId idd, getScope s, exprVal))
+                                            pure ()
+                                          else do pure()
 
 
-                                        remaining <- remainingAssignsParser
-                                        return (assignExpr ++ remaining))
+                                          remaining <- remainingAssignsParser
+                                          return (assignExpr ++ remaining))
 
 
 -- <assignment> -> (<id> | <deref_pointer>) <assign_expr>
@@ -951,7 +952,7 @@ assignmentParser = (do  (idd:x) <- idParser <|> derefPointerParser
 
                         s <- getState
                         if(isExecOn s) then do
-                          s <- updateAndGetState(memTable UPDATE (getStringFromId idd, getScope s, exprVal))
+                          s <- updateAndGetState(memTable UPDATE [] (getStringFromId idd, getScope s, exprVal))
                           pure ()
                         else do pure ()
 
@@ -992,10 +993,10 @@ declrsParser = (do  (semanType, typee) <- typeParser
                     s <- getState
                     if isExecOn s then do -- checando se flag de execucao ta on
                       if val == NULL then do
-                        s <- updateAndGetState(memTable INSERT (getStringFromId idd, getScope s, semanType))
+                        s <- updateAndGetState(memTable INSERT [] (getStringFromId idd, getScope s, semanType))
                         return (((getStringFromId idd, semanType):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
                       else do
-                        s <- updateAndGetState(memTable INSERT (getStringFromId idd, getScope s, val))
+                        s <- updateAndGetState(memTable INSERT [] (getStringFromId idd, getScope s, val))
                         return (((getStringFromId idd, val):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
                     else do
                       if val == NULL then do
@@ -1023,9 +1024,9 @@ remainingDeclrsParser typee = (do   comma <- commaToken
                                     (vals, tokens) <- remainingDeclrsParser typee
                                     s <- getState
                                     if val == NULL then do
-                                      s <- updateAndGetState (memTable INSERT (getStringFromId idd, getScope s, typee))
+                                      s <- updateAndGetState (memTable INSERT [] (getStringFromId idd, getScope s, typee))
                                       return ((getStringFromId idd, typee):vals, comma:idd:maybeAssignExpr ++ tokens)
                                     else do
-                                      s <- updateAndGetState (memTable INSERT (getStringFromId idd, getScope s, val))
+                                      s <- updateAndGetState (memTable INSERT [] (getStringFromId idd, getScope s, val))
                                       return ((getStringFromId idd, val):vals, comma:idd:maybeAssignExpr ++ tokens)) <|>
                               (return ([], []))

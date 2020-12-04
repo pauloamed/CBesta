@@ -1,15 +1,13 @@
-func Int foo (Int a) {
+struct Ae{
   Int x;
-  return 0;
 }
 
-
-proc faa(){
-  return;
+struct Ao{
+  Ae e;
 }
 
-print(foo(1));
-faa();
+Array<10, Ao> x;
 
+x[0].e.x := 10;
 
-print (faa());
+print(x[0].e.x);

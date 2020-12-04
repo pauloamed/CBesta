@@ -16,7 +16,7 @@ declareArgs sp [] (aaHead:aaTail) s = undefined
 declareArgs sp [] [] s = s
 declareArgs sp ((idFaHead, typeFaHead):faTail) (aaHead:aaTail) s =
     if ((getDefaultValue typeFaHead) == (getDefaultValue aaHead)) then do
-      memTable INSERT (idFaHead, sp, aaHead) (declareArgs sp faTail aaTail s)
+      memTable INSERT [] (idFaHead, sp, aaHead) (declareArgs sp faTail aaTail s)
     else do
       undefined
 
