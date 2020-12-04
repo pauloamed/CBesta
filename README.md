@@ -34,11 +34,6 @@ FALAR COM UMBERTO:
   B != 0? (P4)
 
 
-4.12:
-- struct recursivo (falar com umberto)
-- deref pointer
--- recursivo, mais de uma estrela
-
 
 5 e 6.12:
   - revisao e controle de erros
@@ -52,3 +47,7 @@ FALAR COM UMBERTO:
   --- dar erro ou retornar vazia qnd intervs invalidos sao passados?
   -- compatibilidade de tipos
   --- tamanho de array tem q ser int
+
+  - revisar o codigo enquanto comenta (1h30 ~2h)
+  - compatibilidade de tipos
+  - fazer os meninos testarem pra dar erro! >:(
