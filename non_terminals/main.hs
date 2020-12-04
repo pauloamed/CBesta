@@ -380,7 +380,6 @@ forParser =   (do   for <- forToken
                       s <- updateAndGetState (turnExecOn)
                       s <- updateAndGetState (addToCurrentScope forScope)
 
-                      liftIO ( print ( "COMECANDO O FOR"))
                       executeLoop (initBinding, condExpr, loopBinding, body)
 
                       s <- updateAndGetState (removeFromCurrentScope)
@@ -612,7 +611,6 @@ valueIdOpParser idd = (do   (returnedVal, tokens) <- funcallOpParser idd "expr"
 valueIdParser :: ParsecT [Token] OurState IO(Type, [Token])
 valueIdParser = (do   idd <- idToken
                       (val, tokens) <- (valueIdOpParser idd)
-                      -- liftIO(print val)
                       return (val, idd:tokens))
 
 
@@ -659,12 +657,13 @@ processSubProgParser = (do  _ <- enclosedBlocksParser
                             -- ligando pois desligou no return
                             s <- updateAndGetState turnExecOn
 
-                            liftIO(print s)
+                            liftIO(print s) -- process sub
                             -- recuperando valor de var temporaria referetne ao return
-                            x <- (return (getValFromState ((getStringFromSubprCounter s), heapScope, NULL) s))
+                            x <- (return (getValFromState ((getStringFromSubprCounter s), returnSpecialScope, NULL) s))
+
 
                             -- removendo var temporaria referente ao return
-                            s <- updateAndGetState (memTable REMOVE ((getStringFromSubprCounter s), heapScope, NULL))
+                            s <- updateAndGetState (memTable REMOVE ((getStringFromSubprCounter s), returnSpecialScope, NULL))
                             return x)
 
 
@@ -679,7 +678,7 @@ funcallOpParser idd  parent = (do   leftParen <- leftParenToken
 
 
                                     s <- getState
-                                    liftIO(print s)
+                                    liftIO(print s) -- funcall
                                     if (isExecOn s) then do
 
                                       -- buscando na lista de subprogramas o registro do subprograma invocado
@@ -742,7 +741,7 @@ returnParser = (do  ret <- returnToken
 
 
                     if (isExecOn s) then do
-                      s <- updateAndGetState (memTable INSERT ((getStringFromSubprCounter s), heapScope, valExpr))
+                      s <- updateAndGetState (memTable INSERT ((getStringFromSubprCounter s), returnSpecialScope, valExpr))
                       s <- updateAndGetState turnExecOff
 
                       return (ret:tokenExpr)
@@ -799,8 +798,6 @@ allocParser = (do   alloc <- allocToken
                     s <- getState
                     s <- updateAndGetState (memTable INSERT ("", heapScope, semanType))
 
-
-                    liftIO(print s)
 
                     return (getAlloc s semanType, alloc:lp:tokenType ++ [rp]))
 
@@ -886,10 +883,10 @@ printParser = (do printt <- printToken
 
                   s <- getState
                   if isExecOn s then do
-                      -- liftIO (print ">>>> PRINTPARSER")
-                      -- liftIO (print s)
-                      liftIO (print val)
-                      -- liftIO (print "<<<< PRINTPARSER")
+                      liftIO (print ">>>> PRINTPARSER")
+                      liftIO (print s) -- print
+                      liftIO (print val) -- print
+                      liftIO (print "<<<< PRINTPARSER")
                   else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))

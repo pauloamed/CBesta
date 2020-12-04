@@ -3,11 +3,13 @@ func Int foo (Int a) {
   return 0;
 }
 
-proc faa () {
-  print("sei la");
+
+proc faa(){
+  return;
 }
 
+print(foo(1));
+faa();
 
 
-
-// print (faa());
+print (faa());

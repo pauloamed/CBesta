@@ -47,6 +47,11 @@ updateAndGetState f = (do   updateState f
                             return s)
 
 
+
+returnSpecialScope :: String
+returnSpecialScope = "$$$"
+
+
 heapScope :: String
 heapScope = "$$"
 
