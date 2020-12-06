@@ -1,12 +1,10 @@
-module BasicExecUtils where
+module UserTypeAuxMemTable where
 
 import OurState
 import OurType
 
 import Lexer
 import Text.Parsec
-
-import MemTable
 
 
 updateUserType :: Type -> [AccessModifier] -> Type -> Type

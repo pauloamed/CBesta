@@ -11,13 +11,17 @@ import Control.Monad.IO.Class
 
 import Scope
 
-
+import UserTypeAuxMemTable
 
 
 
 --------------------------------------------------------------------------------
 ----------------------------------  GETTER   -----------------------------------
 --------------------------------------------------------------------------------
+
+-- dada uma var, retorna o tipo/valor no topo da sua pilha
+getTypeFromVar :: Var -> Type
+getTypeFromVar (idA, spA, (typeHeadA, counterHeadA) : tailA) = typeHeadA
 
 
 -- funcao pra pegar o alloc mais recente
@@ -109,7 +113,7 @@ getVarFromMaxScope ((idA, spA, headA : tailA):(idB, spB, headB : tailB):tailVars
 ---- entao, pegamos aquela q tem maior escopo (a maior dos maiores escopos em comum eh a que deve ser atualizada)
 getValFromState :: VarParam -> OurState -> Type
 getValFromState varQuery ((l, counter), subp, t, sp, True, contSubpr, loopStack) =
-  (getTypeFromVar (filterSharingScopeVars varQuery ((filterOnlyActiveVars contSubpr l) ++ (filterOnlyGlobals l)))
+  (getTypeFromVar (getVarFromMaxScope(filterSharingScopeVars varQuery ((filterOnlyActiveVars contSubpr l) ++ (filterOnlyGlobals l)))))
 getValFromState _ _ = undefined
 
 
@@ -165,7 +169,7 @@ filterOnlyActiveVars x ((idA, spA, (typeA, counterA) : tailA):tailVars) =
 memTable :: Operation -> [AccessModifier] -> VarParam -> OurState -> OurState
 -- update para varaiveis na heap
 memTable UPDATE modfs (idd, "$$", newVal) ((l, counter), subp, t, sp, True, contSubpr, loopStack) =
-     (updateMemTableHeap (idd, "$$", newVal) l, counter), subp, t, sp, True, contSubpr, loopStack)
+     ((updateMemTableHeap (idd, "$$", newVal) l, counter), subp, t, sp, True, contSubpr, loopStack)
 -- update para variaveis no escopo normal
 memTable UPDATE modfs x ((l, counter), subp, t, sp, True, contSubpr, loopStack) =
     ((updateMemTable x contSubpr modfs l, counter), subp, t, sp, True, contSubpr, loopStack)

@@ -12,13 +12,6 @@ import MemTable
 -----------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------
 
--- dada uma var, retorna o tipo/valor no topo da sua pilha
-getTypeFromVar :: Var -> Type
-getTypeFromVar (idA, spA, (typeHeadA, counterHeadA) : tailA) = typeHeadA
-
------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------
-
 -- fa: formal args, aa: actual args
 declareArgs :: String -> [(String, Type)] -> [Type] -> OurState -> OurState
 declareArgs sp (faHead:faTail) [] s = undefined
