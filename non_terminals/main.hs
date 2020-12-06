@@ -17,12 +17,16 @@ import MemTable
 import SubProgTable
 import TypesTable
 
+import Scope
+
 import OurState
 import OurType
 
 
 import ExprExecUtils
 import BasicExecUtils
+import CreateExecUtils 
+import ModifiersExecUtils
 
 import Control.Monad.IO.Class
 
@@ -235,8 +239,8 @@ structParser = (do  struct <- structToken
                     -- de tipos. se exec tiver off (vai estar off? kk) so processo os
                     -- tokens
                     if (isExecOn s) then do
+                      s <- updateAndGetState (typesTable INSERT (createStruct (getStringFromId idd) []))
                       s <- updateAndGetState turnExecOff
-                      s <- updateAndGetState (typesTable INSERT (StructType (getStringFromId idd, [])))
                       (declrs, declrsTokens) <- multipleDeclrsParser "struct"
                       s <- updateAndGetState turnExecOn
                       rightBrace <- rightBraceToken
@@ -351,11 +355,11 @@ whileParser =   (do   while <- whileToken
                         (hasReturn, enclosedBlocks) <- enclosedBlocksParser -- o corpo
 
                         s <- updateAndGetState (turnExecOn) -- ligo novamente
+                        
                         s <- updateAndGetState (addToCurrentScope whileScope) -- adiciono while ao escopo
-
                         executeLoop([], enclosedExpr, [], enclosedBlocks) -- EXECUCAO DO LOOP DE FACTO
-
                         s <- updateAndGetState (removeFromCurrentScope) -- removendo whiel do escopo
+
                         return (False, while:enclosedExpr ++ enclosedBlocks) 
                         -- whiles, mesmo se parenco com ifs, podem nunca ser executados,
                         -- logo, nao devem ser condiderados como stmts "com retorno"
@@ -462,10 +466,18 @@ loopRecursiveExecution (condExpr, loopBinding, body) =
             
             -- atualizando a var de estado (pode ter ficado obsoleta apos a exeucuao do corpo)
             s <- getState 
-            
-            -- removendo "loop" do escopo atual
-            s <- updateAndGetState removeFromCurrentScope
-            
+
+            if (isExecOn s) then do
+              -- removendo "loop" do escopo atual
+              s <- updateAndGetState removeFromCurrentScope
+              pure()
+            else do
+              -- removendo "loop" do escopo atual
+              s <- updateAndGetState turnExecOn
+              s <- updateAndGetState removeFromCurrentScope
+              s <- updateAndGetState turnExecOff
+              pure()
+
             -- se o exec ficou off (rolou um continue ou um break)
             if(not (isExecOn s)) then do
               -- se o loop control ainda ta True, eh pq foi um continue
@@ -833,7 +845,7 @@ accessModifierOpParser = (do  leftBracket <- leftBracketToken -- access de array
                               (modifiers, tokensRemaining) <- accessModifierOpParser -- chamada recursiva
 
                               -- cria um access modificer pro array
-                              return (((ArrayAM (getIntFromType valExpr)):modifiers), leftBracket:tokensExpr ++ rightBracket:tokensRemaining)) <|>
+                              return (((ArrayAM (getIntValue valExpr)):modifiers), leftBracket:tokensExpr ++ rightBracket:tokensRemaining)) <|>
                          (do  dot <- dotToken
                               idd <- idToken -- campo do struct que sera  acessado
                               (modifiers, tokensRemaining) <- accessModifierOpParser -- chamada recursiva
@@ -905,7 +917,7 @@ processSubProgParser = (do  _ <- enclosedBlocksParser -- processa o subprograma
 
                             -- exec pode ir pra off por conta do return
                             -- mando pra on ao final de sua execucao
-                            s <- updateAndGetState turnExecOn
+                            s <- updateAndGetState turnExecOn 
 
                             -- recuperando valor de var temporaria referetne ao return
                             -- se for proc, essa var eh NULL
@@ -1008,11 +1020,12 @@ returnParser = (do  ret <- returnToken -- token (RETURN)
                       -- adicionar o valor a ser retornado na variavel temporaria para essa funcao
                       s <- updateAndGetState (memTable INSERT [] ((getStringFromSubprCounter s), returnSpecialScope, valExpr))
                       
-                      -- desligando o exec para nao permitir mais execucao do codigo no subpr
-                      s <- updateAndGetState turnExecOff 
 
                       -- se estou dentro de um loop, defino o loop control como a flag RETURN
                       s <- updateAndGetState (setCurrLoopControl RETURN)
+
+                      -- desligando o exec para nao permitir mais execucao do codigo no subpr
+                      s <- updateAndGetState turnExecOff 
 
                       return (ret:tokenExpr)
                     else do return (ret:tokenExpr))

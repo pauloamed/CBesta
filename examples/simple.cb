@@ -1,1 +1,10 @@
-print("Esse eh um teste\n\n");
+
+
+foo(impar,par){
+    
+    {
+        x := 10;
+    }
+
+    Int x;
+}
