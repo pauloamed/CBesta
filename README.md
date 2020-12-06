@@ -34,25 +34,32 @@ FALAR COM UMBERTO:
   B != 0? (P4)
   COMO REPRESENTAR ERROS: FAIL? UNDEF?
 
--- revisao pra ver o q precisa mudar (compatibilidade)
+
+
+
+
+
+TODO 
+-- resolver problema da struct
+--- discutir valor padrao em strcut. x := expr, mas com exec off expr nao eh avaliada corretamente
+-- finalziar documentacao
 -- return solto no codigo
--- se tem reutrn, tem que ter contador de subpr >= 1
+--- se tem reutrn, tem que ter contador de subpr >= 1
 -- cast int, double e bool pra string
+-- revisao pra ver o q precisa mudar (compatibilidade)
+-- ver se acessos ao estado estao com execOn como premissa
+--- ctrl f nos get e ver se tao dentro de isExecOn
+--- pattern matching no memtable pra crud ser sempre com execon
 
-812
-
--- discutir valor padrao em string. x := expr, mas com exec off expr nao eh avaliada corretamente
 
 
-ctrl f nos get e ver se tao dentro de isExecOn
-pattern matching no memtable pra crud ser sempre com execon
+
 
 5 e 6.12:
   - revisao e controle de erros
   -- assignment
   -- como indicar erros?
   -- dupla declaracao
-  --- variaveis
   --- funcs, procs
   --- structs
   -- substr
