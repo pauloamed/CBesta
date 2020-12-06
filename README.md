@@ -32,8 +32,20 @@ FALAR COM UMBERTO:
   STRUCT RECURSIVA
   PROBLEMA 4 TIPO RATIONAL_T (MAISCULO)
   B != 0? (P4)
+  COMO REPRESENTAR ERROS: FAIL? UNDEF?
+
+-- revisao pra ver o q precisa mudar (compatibilidade)
+-- return solto no codigo
+-- se tem reutrn, tem que ter contador de subpr >= 1
+-- cast int, double e bool pra string
+
+812
+
+-- discutir valor padrao em string. x := expr, mas com exec off expr nao eh avaliada corretamente
 
 
+ctrl f nos get e ver se tao dentro de isExecOn
+pattern matching no memtable pra crud ser sempre com execon
 
 5 e 6.12:
   - revisao e controle de erros

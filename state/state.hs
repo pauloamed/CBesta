@@ -17,7 +17,7 @@ type SubProg = (String, Type, [(String, Type)], [Token])
 type SubProgContent = (Type, [(String, Type)], [Token])
 
 -- Memoria, Funcoes, Procedimentos, Tipos e EM_EXEC
-type OurState = (([Var], Int), [SubProg], [Type], [String], Bool, Int, [Bool])
+type OurState = (([Var], Int), [SubProg], [Type], [String], Bool, Int, [(LoopControlType, Int)])
 
 --------------------------------------------------------------------------------
 -----------------------------------  EXEC   ------------------------------------
@@ -81,22 +81,24 @@ loopScope = "loop"
 --------------------------------------------------------------------------------
 
 addLoopControl :: OurState -> OurState
-addLoopControl (v, subp, tl, sp, e, contSubpr, loopStack) = (v, subp, tl, sp, e, contSubpr, (True:loopStack))
+addLoopControl (v, subp, tl, sp, e, contSubpr, loopStack) = (v, subp, tl, sp, e, contSubpr, ((OK, contSubpr):loopStack))
+
 
 removeLoopControl :: OurState -> OurState
-removeLoopControl (v, subp, tl, sp, e, contSubpr, (oldHead:loopStack)) = (v, subp, tl, sp, e, contSubpr, loopStack)
+removeLoopControl (v, subp, tl, sp, e, contSubpr, ((_, _):loopStack)) = (v, subp, tl, sp, e, contSubpr, loopStack)
 removeLoopControl _ = undefined
 
-turnCurrLoopControlOn :: OurState -> OurState
-turnCurrLoopControlOn (v, subp, tl, sp, e, contSubpr, (_:loopStack)) = (v, subp, tl, sp, e, contSubpr, (True:loopStack))
-turnCurrLoopControlOn _ = undefined
 
-turnCurrLoopControlOff :: OurState -> OurState
-turnCurrLoopControlOff (v, subp, tl, sp, e, contSubpr, (_:loopStack)) = (v, subp, tl, sp, e, contSubpr, (False:loopStack))
-turnCurrLoopControlOff _ = undefined
+setCurrLoopControl :: LoopControlType -> OurState -> OurState
+setCurrLoopControl lc (v, subp, tl, sp, e, contSubpr, ((oldValue, snapshotContSubr):loopStack)) = 
+      if(contSubpr==snapshotContSubr) then do 
+        (v, subp, tl, sp, e, contSubpr, ((lc, snapshotContSubr):loopStack))
+      else do (v, subp, tl, sp, e, contSubpr, ((oldValue, snapshotContSubr):loopStack))
+setCurrLoopControl _ _ = undefined
 
-getCurrLoopControl :: OurState -> Bool
-getCurrLoopControl (v, subp, tl, sp, e, contSubpr, (curr:loopStack)) = curr
+
+getCurrLoopControl :: OurState -> LoopControlType
+getCurrLoopControl (v, subp, tl, sp, e, contSubpr, ((curr, _):loopStack)) = curr
 getCurrLoopControl _ = undefined
 
 --------------------------------------------------------------------------------

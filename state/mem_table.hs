@@ -57,6 +57,12 @@ getValFromState :: VarParam -> OurState -> Type
 getValFromState x ((l, _), _, _, _, _, _, _) = (getTypeFromVar (getVarFromMaxScope (filterMatchedVars x l)))
 
 
+getValFromReturn :: VarParam -> OurState -> Type
+getValFromReturn (idd, "$$$", _) ((l, _), _, _, _, _, _, _) = 
+    getExactTypeFromIdAndScope (idd, "$$$") l
+getValFromReturn _ _ = undefined
+
+
 getTypeFromVar :: Var -> Type
 getTypeFromVar (idA, spA, (typeHeadA, counterHeadA) : tailA) = typeHeadA
 
@@ -71,16 +77,16 @@ getVarFromMaxScope ((idA, spA, headA : tailA):(idB, spB, headB : tailB):tailVars
                 getVarFromMaxScope ((idB, spB, headB : tailB):tailVars)
 
 
-getAddrFromIdFromState :: String -> OurState -> Type -- (pointerType)
-getAddrFromIdFromState idd ((v, _), _, _, _, _, _, _) = getAddrFromIdFromMemTable idd v
+getPointerFromIdFromState :: String -> OurState -> Type -- (pointerType)
+getPointerFromIdFromState idd ((v, _), _, _, _, _, _, _) = getPointerFromIdFromMemTable idd v
 
 
 -- tem que ter controle de escopo, nao ta tendo
-getAddrFromIdFromMemTable :: String -> [Var] -> Type -- (pointerType)
-getAddrFromIdFromMemTable idA ((idB, spB, (typeHeadB, _) : tailB):tailVars) =
+getPointerFromIdFromMemTable :: String -> [Var] -> Type -- (pointerType)
+getPointerFromIdFromMemTable idA ((idB, spB, (typeHeadB, _) : tailB):tailVars) =
                   if (idA == idB) then (PointerType (typeHeadB, (idB, spB)))
-                  else getAddrFromIdFromMemTable idA tailVars
-getAddrFromIdFromMemTable _ _ = undefined
+                  else getPointerFromIdFromMemTable idA tailVars
+getPointerFromIdFromMemTable _ _ = undefined
 
 
 getVarToUpdate :: Int -> VarParam -> [Var] -> Var
@@ -95,16 +101,16 @@ getPointerValueFromState _ _ _ = undefined
 
 getPointerValueFromList :: Type -> Int -> [Var] -> Type
 getPointerValueFromList (PointerType (typee, (idd, sp))) 0 l = (PointerType (typee, (idd, sp)))
-getPointerValueFromList (PointerType (typee, (idd, sp))) 1 l = getPointerValueFromListAux (idd, sp) l
+getPointerValueFromList (PointerType (typee, (idd, sp))) 1 l = getExactTypeFromIdAndScope (idd, sp) l
 getPointerValueFromList (PointerType (typee, (idd, sp))) n l = 
-        getPointerValueFromList (getPointerValueFromListAux (idd, sp) l) (n-1) l
+        getPointerValueFromList (getExactTypeFromIdAndScope (idd, sp) l) (n-1) l
   
 
-getPointerValueFromListAux :: (String, String) -> [Var] -> Type
-getPointerValueFromListAux (idA, spA) ((idB, spB, (typeHeadB, _) : tailB):tailVars) =
+getExactTypeFromIdAndScope :: (String, String) -> [Var] -> Type
+getExactTypeFromIdAndScope (idA, spA) ((idB, spB, (typeHeadB, _) : tailB):tailVars) =
                   if (idA == idB && spA == spB) then typeHeadB
-                  else getPointerValueFromListAux (idA, spA) tailVars
-getPointerValueFromListAux _ _ = undefined 
+                  else getExactTypeFromIdAndScope (idA, spA) tailVars
+getExactTypeFromIdAndScope _ _ = undefined 
 
 --------------------------------------------------------------------------------
 ----------------------------------  FILTERS   -----------------------------------

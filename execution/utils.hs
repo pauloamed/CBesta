@@ -101,6 +101,7 @@ getDefaultValue (BoolType _) = (BoolType False)
 getDefaultValue (StringType _) = (StringType "")
 getDefaultValue (StructType (idd, _)) = (StructType (idd, []))
 getDefaultValue (PointerType (typee, _)) = (PointerType (typee, ("","")))
+getDefaultValue NULL = NULL
 
 
 createSimpleType :: Token -> Type

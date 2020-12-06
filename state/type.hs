@@ -32,3 +32,11 @@ data AccessModifier =
     StructAM String |
     ArrayAM Int
     deriving(Eq)
+
+
+data LoopControlType =
+    OK |
+    CONTINUE |
+    BREAK |
+    RETURN
+    deriving(Eq)
