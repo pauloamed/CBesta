@@ -90,11 +90,11 @@ removeLoopControl _ = undefined
 
 
 setCurrLoopControl :: LoopControlType -> OurState -> OurState
+setCurrLoopControl _ (v, subp, tl, sp, e, contSubpr, []) = (v, subp, tl, sp, e, contSubpr, [])
 setCurrLoopControl lc (v, subp, tl, sp, e, contSubpr, ((oldValue, snapshotContSubr):loopStack)) = 
       if(contSubpr==snapshotContSubr) then do 
         (v, subp, tl, sp, e, contSubpr, ((lc, snapshotContSubr):loopStack))
       else do (v, subp, tl, sp, e, contSubpr, ((oldValue, snapshotContSubr):loopStack))
-setCurrLoopControl _ _ = undefined
 
 
 getCurrLoopControl :: OurState -> LoopControlType

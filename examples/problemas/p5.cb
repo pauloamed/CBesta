@@ -1,6 +1,7 @@
 proc mdc(Int n, Int m, Pointer<Int> r){
     if(m % n == 0){
         *r := n;
+        print("");
         return;
     }else if(n % m == 0){
         *r := m;

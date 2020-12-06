@@ -37,8 +37,6 @@ FALAR COM UMBERTO:
 
 
 
-
-
 TODO 
 -- resolver problema da struct
 --- discutir valor padrao em strcut. x := expr, mas com exec off expr nao eh avaliada corretamente

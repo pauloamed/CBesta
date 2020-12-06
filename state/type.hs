@@ -25,7 +25,6 @@ instance Show Type where
     show (ArrayType (x, els)) = id ("(Array : " ++ (show x) ++ " : " ++ show els ++ ")")
     show (PointerType (x, (idd, sp))) = id ("(Pointer : " ++ (show x) ++ " : (" ++ (show idd) ++ ", " ++ (show sp) ++ "))")
     show (NULL) = id ">>NULL<<"
-    show _ = id ">>not implemented<<"
 
 
 data AccessModifier =
@@ -40,3 +39,9 @@ data LoopControlType =
     BREAK |
     RETURN
     deriving(Eq)
+
+instance Show LoopControlType where
+    show OK = "OK"
+    show CONTINUE = "CONTINUE"
+    show BREAK = "BREAK"
+    show RETURN = "RETURN"

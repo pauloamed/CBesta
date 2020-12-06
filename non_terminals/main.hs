@@ -150,7 +150,7 @@ stmtParser = (do  (flag, token) <- (do  x <- continueToken
              (do  (derefVal, derefTokens) <- derefPointerParserWrite
                   assignmentsOp <- assignmentsOpParserDeref derefVal
                   return (False, (derefTokens ++ assignmentsOp))) <|> -- nao eh return
-             (do  (_, declrs) <- declrsParser -- parsing de declaracao
+             (do  (_, declrs) <- declrsParser "stmt"-- parsing de declaracao
                   return (False, declrs)) -- nao eh reutrn
 
 
@@ -232,13 +232,13 @@ structParser = (do  struct <- structToken
                     if (isExecOn s) then do
                       s <- updateAndGetState turnExecOff
                       s <- updateAndGetState (typesTable INSERT (StructType (getStringFromId idd, [])))
-                      (declrs, declrsTokens) <- multipleDeclrsParser
+                      (declrs, declrsTokens) <- multipleDeclrsParser "struct"
                       s <- updateAndGetState turnExecOn
                       rightBrace <- rightBraceToken
                       s <- updateAndGetState (updateType (getStringFromId idd) declrs)
                       return (False, struct:idd:leftBrace:declrsTokens ++ [rightBrace])
                     else do
-                      (declrs, declrsTokens) <- multipleDeclrsParser
+                      (declrs, declrsTokens) <- multipleDeclrsParser "struct"
                       rightBrace <- rightBraceToken
                       return (False, struct:idd:leftBrace:declrsTokens ++ [rightBrace]))
 
@@ -372,7 +372,7 @@ forParserAux :: ParsecT [Token] OurState IO(([Token], [Token], [Token], [Token])
 forParserAux = (do    pure()
                       -- parsing do binding inicial
                       -------------------------------------------------------------
-                      maybeVarBinding1 <- (do   (_, declrs) <- declrsParser
+                      maybeVarBinding1 <- (do   (_, declrs) <- declrsParser "stmt"
                                                 return (declrs)) <|>
                                                 assignmentsParser <|>
                                                 (return [])
@@ -386,7 +386,7 @@ forParserAux = (do    pure()
 
                       -- bindings do final de loop
                       -------------------------------------------------------------
-                      maybeVarBinding2 <- (do   (_, declrs) <- declrsParser
+                      maybeVarBinding2 <- (do   (_, declrs) <- declrsParser "stmt"
                                                 return (declrs)) <|>
                                                 assignmentsParser <|>
                                                 (return [])
@@ -417,7 +417,7 @@ executeLoop (initBinding, condExpr, loopBinding, body) = -- binding inicial, con
         setInput (initBinding ++ remainingTokens)
 
         -- parsing do binding inicial
-        _  <- (do   (_, declrs) <- declrsParser
+        _  <- (do   (_, declrs) <- declrsParser "stmt"
                     return (declrs)) <|>
               assignmentsParser <|>
               (return []) -- no caso de while, esse sempre sera o caso (binding inicial inexistente)
@@ -473,7 +473,7 @@ loopRecursiveExecution (condExpr, loopBinding, body) =
              -- exec fica on so se nao rolar break (rolou continue ou nenhum dos dois)
 
             -- parsing do final loop binding
-            _ <- (do  (_, declrs) <- declrsParser
+            _ <- (do  (_, declrs) <- declrsParser "stmt"
                       return (declrs)) <|>
                       assignmentsParser <|>
                       (return [])
@@ -1087,7 +1087,7 @@ addrParser = ( do addr <- addrToken
                   rightParen <- rightParenToken
 
                   s <- getState -- so realizo a busca de o exec tiver on
-                  if(isExecOn s) then return (getPointerFromId (getStringFromId idd) s, addr:leftParen:idd:[rightParen])
+                  if(isExecOn s) then return (getPointerFromIdFromState (getStringFromId idd) s, addr:leftParen:idd:[rightParen])
                   else return (NULL, addr:leftParen:idd:[rightParen]))
 
 
@@ -1279,70 +1279,83 @@ remainingAssignsParser = (do  remaining <- many (do   comma <- commaToken
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
+maybeAssignExprParser :: String -> ParsecT [Token] OurState IO(Type, [Token])
+maybeAssignExprParser parent = (do  if parent == "struct" then do
+                                      ass <- assignToken
+                                      (val, tokens) <- literalParser
+                                      return ((val, ass:tokens))
+                                    else do
+                                      x <- assignExprParser
+                                      return (x)) <|>
+                                (return (NULL, []))
+
 
 -- <declrs> -> <type> <maybe_assigned_id>  { COMMA <maybe_assigned_id>}]
-declrsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
-declrsParser = (do  (semanType, typee) <- typeParser
-                    idd <- idToken -- aqui eh tokens mesmo
-                    (val, maybeAssignExpr) <- assignExprParser <|> (return (NULL, []))
+declrsParser :: String -> ParsecT [Token] OurState IO([(String, Type)], [Token])
+declrsParser parent = (do   (semanType, typee) <- typeParser
+                            idd <- idToken -- aqui eh tokens mesmo
 
-                    (tailDeclr, tokens) <- remainingDeclrsParser semanType
+                            (val, maybeAssignExpr) <- maybeAssignExprParser parent
+                                                      
 
-                    -- esse parser pode ser acessado como um statement ou como
-                    -- um struct. quando acessado, pode ser que a flag de execucao
-                    -- esteja desligada (struct, declaracao de funcao) ou ligada
-                    -- (execucao normal). quando a flag estiver desligada, nao iremos
-                    -- fazer o update das tabelas de memoria.
-                    -- em ambos os casos vamos retornar uma lista de (String, Type)
-                    -- a fim de poder usar esses valores na construcao de um struct
+                            (tailDeclr, tokens) <- remainingDeclrsParser semanType parent
 
-                    -- pode ser que VAL == NULL: a variavel inicial nao foi inicializada
+                            -- esse parser pode ser acessado como um statement ou como
+                            -- um struct. quando acessado, pode ser que a flag de execucao
+                            -- esteja desligada (struct, declaracao de funcao) ou ligada
+                            -- (execucao normal). quando a flag estiver desligada, nao iremos
+                            -- fazer o update das tabelas de memoria.
+                            -- em ambos os casos vamos retornar uma lista de (String, Type)
+                            -- a fim de poder usar esses valores na construcao de um struct
 
-                    s <- getState
-                    if isExecOn s then do -- checando se flag de execucao ta on
-                      if val == NULL then do
-                        s <- updateAndGetState(memTable INSERT [] (getStringFromId idd, getScope s, semanType))
-                        return (((getStringFromId idd, semanType):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
-                      else do
-                        s <- updateAndGetState(memTable INSERT [] (getStringFromId idd, getScope s, val))
-                        return (((getStringFromId idd, val):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
-                    else do
-                      if val == NULL then do
-                        return (((getStringFromId idd, semanType):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
-                      else do
-                        return (((getStringFromId idd, val):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens)))
+                            -- pode ser que VAL == NULL: a variavel inicial nao foi inicializada
+
+                            s <- getState
+                            if isExecOn s then do -- checando se flag de execucao ta on
+                              if val == NULL then do
+                                s <- updateAndGetState(memTable INSERT [] (getStringFromId idd, getScope s, semanType))
+                                return (((getStringFromId idd, semanType):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
+                              else do
+                                s <- updateAndGetState(memTable INSERT [] (getStringFromId idd, getScope s, val))
+                                return (((getStringFromId idd, val):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
+                            else do
+                              if val == NULL then do
+                                return (((getStringFromId idd, semanType):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens))
+                              else do
+                                return (((getStringFromId idd, val):tailDeclr), (typee ++ idd:maybeAssignExpr ++ tokens)))
 
 
 -- <declrs> -> {<declr> SEPARATOR}+
 -- parser de uma lista de declaracoes
-multipleDeclrsParser :: ParsecT [Token] OurState IO([(String, Type)], [Token])
-multipleDeclrsParser = (do  (hDeclrs, hTokens) <- declrsParser
-                            x <- separatorToken
-                            (tDeclrs, tTokens) <- multipleDeclrsParser <|> (return ([], []))
-                            return (hDeclrs ++ tDeclrs, hTokens ++ x:tTokens))
+multipleDeclrsParser :: String -> ParsecT [Token] OurState IO([(String, Type)], [Token])
+multipleDeclrsParser parent = (do   (hDeclrs, hTokens) <- declrsParser parent
+                                    x <- separatorToken
+                                    (tDeclrs, tTokens) <- (multipleDeclrsParser parent) <|> (return ([], []))
+                                    return (hDeclrs ++ tDeclrs, hTokens ++ x:tTokens))
 
 
 -- <maybe_assigned_id> -> ID [<assign_expr>]
-remainingDeclrsParser :: Type -> ParsecT [Token] OurState IO([(String, Type)], [Token])
-remainingDeclrsParser typee = (do   comma <- commaToken
-                                    idd <- idToken -- aqui eh token mesmo
-                                    (val, maybeAssignExpr) <- assignExprParser <|> (return (NULL, []))
-                                    -- TODO: struct valor padrao pode dar ruim
+remainingDeclrsParser :: Type -> String -> ParsecT [Token] OurState IO([(String, Type)], [Token])
+remainingDeclrsParser typee parent = 
+          (do comma <- commaToken
+              idd <- idToken -- aqui eh token mesmo
+              (val, maybeAssignExpr) <- maybeAssignExprParser parent
+              -- TODO: struct valor padrao pode dar ruim
 
-                                    -- pode ser que VAL == NULL: a variavel nao foi inicializada
+              -- pode ser que VAL == NULL: a variavel nao foi inicializada
 
-                                    (vals, tokens) <- remainingDeclrsParser typee
-                                    s <- getState
-                                    if(isExecOn s) then do -- so insere na memtable quando o exec ta on
-                                      if val == NULL then do 
-                                        s <- updateAndGetState (memTable INSERT [] (getStringFromId idd, getScope s, typee))
-                                        return ((getStringFromId idd, typee):vals, comma:idd:maybeAssignExpr ++ tokens)
-                                      else do
-                                        s <- updateAndGetState (memTable INSERT [] (getStringFromId idd, getScope s, val))
-                                        return ((getStringFromId idd, val):vals, comma:idd:maybeAssignExpr ++ tokens)
-                                    else
-                                      if val == NULL then do 
-                                        return ((getStringFromId idd, typee):vals, comma:idd:maybeAssignExpr ++ tokens)
-                                      else do
-                                        return ((getStringFromId idd, val):vals, comma:idd:maybeAssignExpr ++ tokens)) <|>
-                              (return ([], []))
+              (vals, tokens) <- remainingDeclrsParser typee parent
+              s <- getState
+              if(isExecOn s) then do -- so insere na memtable quando o exec ta on
+                if val == NULL then do 
+                  s <- updateAndGetState (memTable INSERT [] (getStringFromId idd, getScope s, typee))
+                  return ((getStringFromId idd, typee):vals, comma:idd:maybeAssignExpr ++ tokens)
+                else do
+                  s <- updateAndGetState (memTable INSERT [] (getStringFromId idd, getScope s, val))
+                  return ((getStringFromId idd, val):vals, comma:idd:maybeAssignExpr ++ tokens)
+              else
+                if val == NULL then do 
+                  return ((getStringFromId idd, typee):vals, comma:idd:maybeAssignExpr ++ tokens)
+                else do
+                  return ((getStringFromId idd, val):vals, comma:idd:maybeAssignExpr ++ tokens)) <|>
+          (return ([], []))
