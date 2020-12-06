@@ -1,9 +1,1 @@
-Pointer<Int> x := alloc(Int);
-print(*x);
-read(*x);
-print(*x);
-
-
-*x := 4;
-
-print(*x);
+print("Esse eh um teste\n\n");

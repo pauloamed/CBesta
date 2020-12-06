@@ -4,12 +4,12 @@ import OurState
 import OurType
 
 typesTable :: Operation -> Type -> OurState -> OurState
-typesTable INSERT t (v, subp, tl, sp, e, contSubpr, loopStack) = (v, subp, insertTypesTable t tl, sp, e, contSubpr, loopStack)
+typesTable INSERT t (v, subp, tl, sp, True, contSubpr, loopStack) = (v, subp, insertTypesTable t tl, sp, True, contSubpr, loopStack)
 typesTable _ _ _ = undefined
 
 
 updateType :: String -> [(String, Type)] -> OurState -> OurState
-updateType idd declrs (v, subp, tl, sp, e, contSubpr, loopStack) = (v, subp, updateTypesTable idd declrs tl, sp, e, contSubpr, loopStack)
+updateType idd declrs (v, subp, tl, sp, True, contSubpr, loopStack) = (v, subp, updateTypesTable idd declrs tl, sp, True, contSubpr, loopStack)
 
 
 updateTypesTable :: String -> [(String, Type)] -> [Type] -> [Type]

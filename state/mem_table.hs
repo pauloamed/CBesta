@@ -16,19 +16,26 @@ import Control.Monad.IO.Class
 
 
 addToScopeList :: OurState -> OurState
-addToScopeList (v, subp, tl, tailSp, e, contSubpr, loopStack) = (v, subp, tl, ((rootScope):tailSp), e, contSubpr, loopStack)
+addToScopeList (v, subp, tl, tailSp, True, contSubpr, loopStack) = (v, subp, tl, ((rootScope):tailSp), True, contSubpr, loopStack)
+addToScopeList _ = undefined
 
 
 removeFromScopeList :: OurState -> OurState
-removeFromScopeList (v, subp, tl, (sp:tailSp), e, contSubpr, loopStack) = (v, subp, tl, tailSp, e, contSubpr, loopStack)
+removeFromScopeList (v, subp, tl, (sp:tailSp), True, contSubpr, loopStack) = (v, subp, tl, tailSp, True, contSubpr, loopStack)
+removeFromScopeList _ = undefined
+
 
 
 addToCurrentScope :: String -> OurState -> OurState
-addToCurrentScope x (v, subp, tl, (sp:tailSp), e, contSubpr, loopStack) = (v, subp, tl, ((x ++ "/" ++ sp):tailSp), e, contSubpr, loopStack)
+addToCurrentScope x (v, subp, tl, (sp:tailSp), True, contSubpr, loopStack) = 
+        (v, subp, tl, ((x ++ "/" ++ sp):tailSp), True, contSubpr, loopStack)
+addToCurrentScope _ _ = undefined
 
 
 removeFromCurrentScope :: OurState -> OurState
-removeFromCurrentScope ((v, heapCounter), subp, tl, (sp:tailSp), e, contSubpr, loopStack) = ((removeScopeFromMemTable sp v, heapCounter), subp, tl, ((removeScopeHead sp):tailSp), e, contSubpr, loopStack)
+removeFromCurrentScope ((v, heapCounter), subp, tl, (sp:tailSp), True, contSubpr, loopStack) =
+        ((removeScopeFromMemTable sp v, heapCounter), subp, tl, ((removeScopeHead sp):tailSp), True, contSubpr, loopStack)
+removeFromCurrentScope _ = undefined
 
 
 getScope :: OurState -> String
@@ -54,7 +61,8 @@ isSuffixOf s (hx:tx) =
 
 
 getValFromState :: VarParam -> OurState -> Type
-getValFromState x ((l, _), _, _, _, _, _, _) = (getTypeFromVar (getVarFromMaxScope (filterMatchedVars x l)))
+getValFromState x ((l, _), _, _, _, True, _, _) = (getTypeFromVar (getVarFromMaxScope (filterMatchedVars x l)))
+getValFromState _ _ = undefined
 
 
 getValFromReturn :: VarParam -> OurState -> Type
@@ -78,7 +86,8 @@ getVarFromMaxScope ((idA, spA, headA : tailA):(idB, spB, headB : tailB):tailVars
 
 
 getPointerFromIdFromState :: String -> OurState -> Type -- (pointerType)
-getPointerFromIdFromState idd ((v, _), _, _, _, _, _, _) = getPointerFromIdFromMemTable idd v
+getPointerFromIdFromState idd ((v, _), _, _, _, True, _, _) = getPointerFromIdFromMemTable idd v
+getPointerFromIdFromState _ _ = undefined
 
 
 -- tem que ter controle de escopo, nao ta tendo
@@ -111,6 +120,20 @@ getExactTypeFromIdAndScope (idA, spA) ((idB, spB, (typeHeadB, _) : tailB):tailVa
                   if (idA == idB && spA == spB) then typeHeadB
                   else getExactTypeFromIdAndScope (idA, spA) tailVars
 getExactTypeFromIdAndScope _ _ = undefined 
+
+
+getAlloc :: OurState -> Type -> Type
+getAlloc s t = (PointerType (t, (getDecCounterStr s, heapScope)))
+
+
+getDecCounterStr :: OurState -> String
+getDecCounterStr ((l, counter), subp, t, sp, True, contSubpr, loopStack) = (show (counter-1))
+getDecCounterStr _ = undefined
+
+
+getVarToUpdateTest :: VarParam -> OurState -> Var
+getVarToUpdateTest x ((l, counter), subp, t, sp, True, contSubpr, loopStack) = (getVarToUpdate contSubpr x l)
+getVarToUpdateTest _ _ = undefined
 
 --------------------------------------------------------------------------------
 ----------------------------------  FILTERS   -----------------------------------
@@ -147,11 +170,13 @@ filterOnlyActiveVars x ((idA, spA, (typeA, counterA) : tailA):tailVars) =
 
 memTable :: Operation -> [AccessModifier] -> VarParam -> OurState -> OurState
 -- memTable UPDATE [] x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr l, contSubpr), subp, t, sp, e, contSubpr, loopStack)
-memTable UPDATE modfs (idd, "$$", newVal) ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTableHeap (idd, "$$", newVal) l, counter), subp, t, sp, e, contSubpr, loopStack)
-memTable UPDATE modfs x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((updateMemTable x contSubpr modfs l, counter), subp, t, sp, e, contSubpr, loopStack)
-memTable INSERT _ (_, "$$", varVal) ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable 0 ((show counter), heapScope, varVal) l, (counter + 1)), subp, t, sp, e, contSubpr, loopStack)
-memTable INSERT _ x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((insertMemTable contSubpr x l, counter), subp, t, sp, e, contSubpr, loopStack)
-memTable REMOVE _ x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = ((removeMemTable x l, counter), subp, t, sp, e, contSubpr, loopStack)
+memTable UPDATE modfs (idd, "$$", newVal) ((l, counter), subp, t, sp, True, contSubpr, loopStack) = ((updateMemTableHeap (idd, "$$", newVal) l, counter), subp, t, sp, True, contSubpr, loopStack)
+memTable UPDATE modfs x ((l, counter), subp, t, sp, True, contSubpr, loopStack) = ((updateMemTable x contSubpr modfs l, counter), subp, t, sp, True, contSubpr, loopStack)
+memTable INSERT _ (_, "$$", varVal) ((l, counter), subp, t, sp, True, contSubpr, loopStack) = ((insertMemTable 0 ((show counter), heapScope, varVal) l, (counter + 1)), subp, t, sp, True, contSubpr, loopStack)
+memTable INSERT _ x ((l, counter), subp, t, sp, True, contSubpr, loopStack) = ((insertMemTable contSubpr x l, counter), subp, t, sp, True, contSubpr, loopStack)
+memTable REMOVE _ x ((l, counter), subp, t, sp, True, contSubpr, loopStack) = ((removeMemTable x l, counter), subp, t, sp, True, contSubpr, loopStack)
+memTable _ _ _ _ = undefined
+
 
 -- StructType (String, [(String, Type)]) | -- nome seguido de uma lista de nomes e Types (tipo + valor) |
 -- ArrayType (Int, [Type])
@@ -192,10 +217,6 @@ updateUserType (ArrayType (size, elements)) modfs newVal = updateArray (ArrayTyp
 updateUserType _ _ _ = undefined
 
 
-
-getVarToUpdateTest :: VarParam -> OurState -> Var
-getVarToUpdateTest x ((l, counter), subp, t, sp, e, contSubpr, loopStack) = (getVarToUpdate contSubpr x l)
-
 -- 1.filtrar somente as vars globais ou da minha ativacao
 -- 2.filtrar somente as vars que dividem escopo comigo
 updateMemTable :: VarParam -> Int -> [AccessModifier] -> [Var] -> [Var]
@@ -218,15 +239,6 @@ updateMemTableHeap (idA, spA, typeA) ((idB, spB, (typeHeadB, counterHeadB) : val
                     else 
                       (((idB, spB, (typeHeadB, counterHeadB) : valListB)) : updateMemTableHeap (idA, spA, typeA) l)
 updateMemTableHeap _ _ = undefined
-
-
-
-getAlloc :: OurState -> Type -> Type
-getAlloc s t = (PointerType (t, (getDecCounterStr s, heapScope)))
-
-
-getDecCounterStr :: OurState -> String
-getDecCounterStr ((l, counter), subp, t, sp, e, contSubpr, loopStack) = (show (counter-1))
 
 
 insertMemTable :: Int -> VarParam -> [Var] -> [Var]

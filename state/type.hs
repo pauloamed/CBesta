@@ -19,8 +19,9 @@ data Type =
 instance Show Type where
     show (IntType x) = id ("Int: " ++ (show x))
     show (DoubleType x) = show x
-    show (BoolType x) = show x
-    show (StringType x) = show x
+    show (BoolType True) = id "true"
+    show (BoolType False) = id "false"
+    show (StringType x) = id x
     show (StructType (x, fields)) = id ("(Struct : " ++ x ++ " : " ++ show fields ++ ")")
     show (ArrayType (x, els)) = id ("(Array : " ++ (show x) ++ " : " ++ show els ++ ")")
     show (PointerType (x, (idd, sp))) = id ("(Pointer : " ++ (show x) ++ " : (" ++ (show idd) ++ ", " ++ (show sp) ++ "))")

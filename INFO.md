@@ -3,8 +3,10 @@ coisas que tornam o execOff:
     - break
     - continue
 
-func y(...){ 
-    return; -- so posso modificar o topo do loop control se ativacao tiver ok
+if(){
+    return;
+}else{
+    
 }
 
 

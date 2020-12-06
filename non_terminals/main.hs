@@ -88,11 +88,16 @@ blockParser = (do   (hasReturn, stmt) <- stmtParser -- pode ser um stmt seguido 
                     -- 1. criar o seu escopo no escopo atual
                     -- 2. executa-lo vendo se tem algum stmt de return em seu corpo
                     -- 3. remover seu escopo do escopo atual
-                    s <- updateAndGetState (addToCurrentScope blockScope) -- entrando num novo escopo
-                    (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+
                     s <- getState
-                    s <- updateAndGetState removeFromCurrentScope -- saindo do escopo criado
-                    return (hasReturn, enclosedBlocks))
+                    if (isExecOn s) then do
+                      s <- updateAndGetState (addToCurrentScope blockScope) -- entrando num novo escopo
+                      (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                      s <- updateAndGetState removeFromCurrentScope -- saindo do escopo criado
+                      return (hasReturn, enclosedBlocks)
+                    else do
+                      (hasReturn, enclosedBlocks) <- enclosedBlocksParser
+                      return (hasReturn, enclosedBlocks))
                     -- ou um bloco dentro de chaves
 
 
@@ -316,8 +321,6 @@ subprDeclrParser idd argsSeman returnSemanType =
               s <- getState
               if (not hasReturn) then undefined
               else pure()
-              s <- updateAndGetState (subProgTable INSERT (getStringFromId idd,
-                  returnSemanType, argsSeman, enclosedBlocks))
               return (enclosedBlocks))
 
 
@@ -406,6 +409,7 @@ forParserAux = (do    pure()
 
 -- PARSER PARA EXECUTAR O LOOP: usado tanto para for como while
 -- funciona resinserindo os tokens processados (simulando o loop)
+-- SO EXECUTA SE EXEC TIVER ON
 executeLoop :: ([Token], [Token], [Token], [Token]) -> ParsecT [Token] OurState IO()
 executeLoop (initBinding, condExpr, loopBinding, body) = -- binding inicial, cond de controle, binding de final de loop e corpo
   (do   s <- getState
@@ -429,6 +433,8 @@ executeLoop (initBinding, condExpr, loopBinding, body) = -- binding inicial, con
 
 -- funcao para execucao de loop de facto
 -- vai ficar testando a condicao e exeuctando o corpo (+ binding de final de loop)
+-- SO EXECUTA SE EXEC TIVER ON
+-- PODE SAIR COM EXEC OFF, EM CASO DE RETURN
 loopRecursiveExecution :: ([Token], [Token], [Token]) -> ParsecT [Token] OurState IO()
 loopRecursiveExecution (condExpr, loopBinding, body) =
     (do   pure()
@@ -520,8 +526,6 @@ forParser =   (do   for <- forToken
                     else do
                       (_, tokens) <- forParserAux
                       return (False, for:leftParen:tokens))
-
-
                     -- (1) removendo FOR do escopo atual
 
 
@@ -539,7 +543,6 @@ ifParser =  (do   iff <- ifToken
                       -- tambem olha as regras do return (if E else precisam ter return)
                       -- nao havend else, nao ha return no else...
                     (hasReturn, enclosedBlocks) <- enclosedBlocksParser
-                    s <- getState
                     (hasReturnElse, maybeElse) <- maybeElseParser
                     return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
                   else do
@@ -564,7 +567,6 @@ ifParser =  (do   iff <- ifToken
 
                       -- se o exec foi pra OFF durante execucao do corpo do IF
                       if(not(isExecOn s)) then do -- exec ficou falso durante o processametno do if
-
                         -- processa o else com exec off (ia ser off anyway)
                         (hasReturnElse, maybeElse) <- maybeElseParser
                         return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
@@ -578,10 +580,8 @@ ifParser =  (do   iff <- ifToken
                       (hasReturn, enclosedBlocks) <- enclosedBlocksParser -- processa o corpo do if
                       s <- updateAndGetState turnExecOn -- joga on de novo 
                       (hasReturnElse, maybeElse) <- maybeElseParser -- processa o maybe else com exec on
-
                       -- pode ser que o else jogue o exec pra off. nao precisa tratar isso aqui, 
                       -- ja que continuaria off
-                      
                       return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse))
 
 
@@ -621,7 +621,8 @@ typeParser = (do  pure()
                   return (createSimpleType simpleTypeToken, [simpleTypeToken])) <|>
              (do  idd <- typeIdToken -- id de tipo definido pelo usuario
                   s <- getState -- da um get tate pra buscar esse tipo na tabela de tipos
-                  return (getTypeFromState (getStringFromId idd) s, [idd])) <|>
+                  if(isExecOn s) then return (getTypeFromState (getStringFromId idd) s, [idd])
+                  else return (NULL, [idd])) <|>
              (do  array <- arrayToken -- processamento de array
                   lessThan <- lessThanToken
                   (arraySize, size) <- exprParser -- tamanho do array TODO: compatibilidade
@@ -998,6 +999,12 @@ returnParser = (do  ret <- returnToken -- token (RETURN)
 
                     s <- getState
                     if (isExecOn s) then do -- se exec tiver on
+
+                      x <- (return (getStringFromSubprCounter s))
+                      
+                      if(x == "0") then undefined
+                      else pure ()
+
                       -- adicionar o valor a ser retornado na variavel temporaria para essa funcao
                       s <- updateAndGetState (memTable INSERT [] ((getStringFromSubprCounter s), returnSpecialScope, valExpr))
                       
@@ -1169,6 +1176,7 @@ printParser = (do printt <- printToken
 
                   s <- getState
                   if isExecOn s then do -- so executa se exec tiver on 
+                      liftIO (print s)
                       liftIO (print val) -- 
                   else pure ()
 
