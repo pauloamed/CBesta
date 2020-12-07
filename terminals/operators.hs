@@ -12,6 +12,12 @@ assignToken = tokenPrim show update_pos get_token where
   get_token _  = Nothing
 
 
+arrowToken :: ParsecT [Token] st IO (Token)
+arrowToken = tokenPrim show update_pos get_token where
+  get_token (Arrow p)  = Just (Arrow p)
+  get_token _  = Nothing
+
+
 modToken :: ParsecT [Token] st IO (Token)
 modToken = tokenPrim show update_pos get_token where
   get_token (Mod p) = Just (Mod p)

@@ -1,7 +1,6 @@
 READ:
     somente tipos primitivos
     nao conseguir converter a string pro tipo desejado
-    ASSIGN: deixa pro update
 
 MATCHING DE TIPOS NA CHAMADA DE SUBPR:
     pode dar erro

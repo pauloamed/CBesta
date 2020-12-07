@@ -6,6 +6,12 @@ import Text.Parsec
 import TerminalUtils
 
 
+nullToken :: ParsecT [Token] st IO (Token)
+nullToken = tokenPrim show update_pos get_token where
+  get_token (Null p) = Just (Null p)
+  get_token _  = Nothing
+
+
 doubleLitToken :: ParsecT [Token] st IO (Token)
 doubleLitToken = tokenPrim show update_pos get_token where
   get_token (DoubleLit p x) = Just (DoubleLit p x)

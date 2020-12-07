@@ -110,5 +110,6 @@ getCurrLoopControl _ = undefined
 data Operation =
   INSERT |
   REMOVE |
-  UPDATE 
+  UPDATE |
+  UPDATE_EXACT
   deriving (Enum)

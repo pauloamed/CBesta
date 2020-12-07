@@ -95,6 +95,15 @@ evalType (IntType x) (GreaterThan _) (IntType y) = BoolType (x > y)
 evalType (IntType x) (LessEquals _) (IntType y) = BoolType (x <= y)
 evalType (IntType x) (GreaterEquals _) (IntType y) = BoolType (x >= y)
 
+evalType (PointerType (_, x)) (Equals _) (PointerType (_, y)) = BoolType (x == y)
+
+evalType (BoolType _) _ _ = undefined
+evalType (IntType _) _ _ = undefined
+evalType (DoubleType _) _ _ = undefined
+evalType (StringType _) _ _ = undefined
+evalType (PointerType _) _ _ = undefined
+evalType (ArrayType _) _ _ = undefined
+evalType (StructType _) _ _ = undefined
 evalType _ _ _ = undefined
 
 

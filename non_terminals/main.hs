@@ -26,7 +26,7 @@ import OurType
 import ExprExecUtils
 import BasicExecUtils
 import CreateExecUtils 
-import ModifiersExecUtils
+import ModifiersReadExecUtils
 
 import Control.Monad.IO.Class
 
@@ -167,7 +167,8 @@ stmtParser = (do  (flag, token) <- (do  x <- continueToken
 -- funcao necessaria para assignment em ponteiros dereferenciaos
 -- ela ja recebe o (idd e escopo) da variavel alvo
 assignmentsOpParserDeref :: VarParam -> ParsecT [Token] OurState IO([Token])
-assignmentsOpParserDeref (idd, sp, _) = (do   (exprVal, assignExpr) <- assignExprParser 
+assignmentsOpParserDeref (idd, sp, _) = (do   s <- getState
+                                              (exprVal, assignExpr) <- assignExprParser 
                                               -- valor que vai ser atribuido
 
                                               -- vai fazer um update em (idd,sp) usando exprVal
@@ -184,6 +185,26 @@ assignmentsOpParserDeref (idd, sp, _) = (do   (exprVal, assignExpr) <- assignExp
                                               return (assignExpr ++ remaining))
 
 
+-- a.b.c->d->f->g
+-- .e.f.t
+
+-- a.b.c == 0 setas -- resolve como sempre resolveu
+-- a
+-- ->b.c == 1 seta 
+
+-- a.b
+-- ->c == 1 seta 
+
+-- a.b->c
+-- ->d == 2 setas
+-- a.b->c->d
+-- ->e.f.g.h == 3 setas
+
+-- aqueal funcao retorna o valor em e
+
+-- (->d)
+--   se for seta, a gnt vai 
+
 
 
 -- <assignments_op> -> <assign_expr> <remaining_assign>
@@ -195,12 +216,38 @@ assignmentsOpParser idd modifiers = (do   (exprVal, assignExpr) <- assignExprPar
 
                                           -- TODO: cchecar tipos
 
+                                          -- 1- separar as listas (antes da ultima seta, depois da ultima seta)
+                                          -- 2- aplicar isso na lista antes da ultima seta
+                                          --         -- vai ler ate qualquer seta
+                                          --         -- vai pegar o ponteiro que ta antes dessa seta
+                                          --         -- vai buscar o type que ta salvo nesse ponteiro
+                                          --         -- vai repetir passos 1-3`
+                                          -- 3- pegar o addr que 2 retorna e fazer um update maroto nele
+
                                           s <- getState
                                           if isExecOn s then do -- so faz update se exec tiver on
-                                            s <- updateAndGetState(memTable UPDATE modifiers (getStringFromId idd, getScope s, exprVal))
+                                            -- splittedModfs <- (return (splitAccessModifiersAtLastArrow modifiers))
+                                            (left, right) <- (return (getLastModifiersSepByArrow modifiers))
+
+                                            -- liftIO(print(left))
+                                            -- liftIO(print(right))
+
+                                            if((left == []) && (not (headEqualsToP2SAM right))) then do -- a gnt nao tem setinha
+                                              -- liftIO(print("AAAAAAAAAAAAA"))
+                                              s <- updateAndGetState(memTable UPDATE right (getStringFromId idd, getScope s, exprVal))
+                                              pure()
+                                            else do
+                                              -- liftIO (print(s))
+                                              currVal <- (return (getValFromState (getStringFromId idd, getScope s, NULL) s))
+                                              currVal <- (return (getValFromValAndModifiers currVal left s))
+
+                                              (targetIdd, targetSp, _) <- (return (getAddrFromPointer currVal))
+
+                                              -- currVal eh um ponteiro cujo valor guaradado no endereco apontando vai ser modificado
+                                              s <- updateAndGetState(memTable UPDATE_EXACT (alterModifiersHead right) (targetIdd, targetSp, exprVal))
+                                              pure ()
                                             pure ()
                                           else do pure()
-
 
                                           remaining <- remainingAssignsParser -- pode ter mais assings
                                           return (assignExpr ++ remaining))
@@ -430,18 +477,22 @@ executeLoop (initBinding, condExpr, loopBinding, body) = -- binding inicial, con
         s <- updateAndGetState (addLoopControl) 
         -- adicionando o controle de loop (pilha de booleanos indicando se o loop ainda eh valido (!= break))
         
+        oldTokens <- getInput
+        setInput([])
         -- simulando reinsercao dos tokens de binding inicial
-        remainingTokens <- getInput
-        setInput (initBinding ++ remainingTokens)
+        if(initBinding /= []) then do
+          setInput (initBinding)
 
-        -- parsing do binding inicial
-        _  <- (do   (_, declrs) <- declrsParser "stmt"
-                    return (declrs)) <|>
-              assignmentsParser <|>
-              (return []) -- no caso de while, esse sempre sera o caso (binding inicial inexistente)
-
+          -- parsing do binding inicial
+          _  <- (do   (_, declrs) <- declrsParser "stmt"
+                      return (declrs)) <|>
+                assignmentsParser <|>
+                (return []) -- no caso de while, esse sempre sera o caso (binding inicial inexistente)
+          pure()
+        else pure ()
         loopRecursiveExecution (condExpr, loopBinding, body) -- execucao do loop de facto
         s <- updateAndGetState removeLoopControl -- removendo o controle de loop da pilha
+        setInput(oldTokens)
         return ())
 
 
@@ -456,9 +507,11 @@ loopRecursiveExecution (condExpr, loopBinding, body) =
           -- simulando entrada de condicao
           remainingTokens <- getInput
           setInput (condExpr ++ remainingTokens)
+          -- liftIO(print(condExpr ++ remainingTokens) )
 
           -- parsing de condicao a fim de checar valor
           (condValue, _) <- exprParser
+
 
           if(not (assertType condValue (BoolType False))) then 
             undefined
@@ -503,12 +556,14 @@ loopRecursiveExecution (condExpr, loopBinding, body) =
 
              -- exec fica on so se nao rolar break (rolou continue ou nenhum dos dois)
 
-            -- parsing do final loop binding
-            _ <- (do  (_, declrs) <- declrsParser "stmt"
-                      return (declrs)) <|>
-                      assignmentsParser <|>
-                      (return [])
-
+            if(loopBinding /= []) then do
+              -- parsing do final loop binding
+              _ <- (do  (_, declrs) <- declrsParser "stmt"
+                        return (declrs)) <|>
+                        assignmentsParser <|>
+                        (return [])
+              pure()
+            else pure()
             s <- getState -- pegnado estado atualziado
 
             -- se o exec ta on, eh pq nao rolou um break
@@ -665,25 +720,22 @@ typeParser = (do  pure()
                   return (createSimpleType simpleTypeToken, [simpleTypeToken])) <|>
              (do  idd <- typeIdToken -- id de tipo definido pelo usuario
                   s <- getState -- da um get tate pra buscar esse tipo na tabela de tipos
-                  if(isExecOn s) then return (getTypeFromState (getStringFromId idd) s, [idd])
-                  else return (NULL, [idd])) <|>
+                  return (getTypeFromState (getStringFromId idd) s, [idd])) <|>
              (do  array <- arrayToken -- processamento de array
                   lessThan <- lessThanToken
 
-                  (arraySizeVal, size) <- exprParser -- tamanho do array TODO: compatibilidade
+                  (arraySizeVal, size) <- literalParser -- tamanho do array TODO: compatibilidade
                   comma <- commaToken
                   (semanType, typeToken) <- typeParser -- chamada recursiva pra processar o tipo do array
                   greaterThan <- greaterThanToken
 
                   s <- getState
-                  if(isExecOn s) then do
-                    if(not (assertType arraySizeVal (IntType 0))) then do
-                      undefined
-                    else pure()
-                    arraySize <- (return (getIntValue arraySizeVal))
-                    -- criacao de um array usando seu tamanho e o tipo processado
-                    return (createArray arraySize semanType, (array:lessThan:typeToken ++ comma:size ++ [greaterThan]))
-                  else return(NULL, (array:lessThan:typeToken ++ comma:size ++ [greaterThan]))) <|>
+                  if(not (assertType arraySizeVal (IntType 0))) then do
+                    undefined
+                  else pure()
+                  arraySize <- (return (getIntValue arraySizeVal))
+                  -- criacao de um array usando seu tamanho e o tipo processado
+                  return (createArray arraySize semanType, (array:lessThan:size ++ comma:typeToken ++ [greaterThan]))) <|>
              (do  x <- pointerToken -- processamento deu um ponteiro
                   lessThan <- lessThanToken
                   (semanType, typeToken) <- typeParser -- chamada recursiva para procesar tipo para o qual o ponteiro aponta
@@ -700,6 +752,7 @@ typeParser = (do  pure()
 idParser :: ParsecT [Token] OurState IO([AccessModifier], [Token])
 idParser = (do  idd <- idToken -- nome da variavel (so um palavra pro id)
                 -- sequencia de modficadores de acesso (struct ou array) (pode ser vazio)
+                
                 (maybeAccessModf, accessTokens) <- accessModifierOpParser
                 return (maybeAccessModf, idd:accessTokens))
 
@@ -840,7 +893,9 @@ valueParser = (do   literal <- literalParser
               (do   command <- commandWithRetParser
                     return command) <|>
               (do   derefPointer <- derefPointerParserRead
-                    return derefPointer)
+                    return derefPointer) <|>
+              (do   nullValue <- nullToken
+                    return (((PointerType (NULL, ("", ""))),[nullValue])))
 
 
 -- <literal> -> INT_LIT | BOOL_LIT | DOUBLE_LIT | STRING_LIT
@@ -863,8 +918,9 @@ valueIdOpParser idd = (do   (returnedVal, tokens) <- funcallOpParser idd "expr" 
                             -- id seguido de modificadores de acesso
                             if(isExecOn s) then do
                               -- recupera o valor da variavel apos aplicar os modificadores de acesso em idd
-                              val <- (return (getValFromValAndModifiers (getValFromState (getStringFromId idd,
-                                      getScope s, NULL) s) modifiers))
+                              idType <- (return ((getValFromState (getStringFromId idd, getScope s, NULL) s)))
+                              -- liftIO(print(idType))
+                              val <- (return (getValFromValAndModifiers idType modifiers s))
                               return ((val, tokens))
                             else do return (NULL, tokens))
 
@@ -893,6 +949,12 @@ accessModifierOpParser = (do  leftBracket <- leftBracketToken -- access de array
 
                               -- cria um access modifier pro struct
                               return (((StructAM (getStringFromId idd)):modifiers), dot:[idd])) <|>
+                        (do   arrow <- arrowToken
+                              idd <- idToken -- campo do struct que sera  acessado
+                              (modifiers, tokensRemaining) <- accessModifierOpParser -- chamada recursiva
+
+                              -- cria um access modifier pro struct
+                              return (((P2SAM (getStringFromId idd)):modifiers), arrow:[idd])) <|>
                          (return ([],[]))
 
 
@@ -913,7 +975,7 @@ derefPointerParserRead = (do  stars <- many1 starToken -- lendo PELO MENOS UMA e
                                 -- recupera o valor representado por idParser (idd + modifiers)
                                 -- esse valor DEVE ser um ponteiro
                                 val <- (return (getValFromValAndModifiers (getValFromState (getStringFromId idd,
-                                              getScope s, NULL) s) modifiers))
+                                              getScope s, NULL) s) modifiers s))
 
                                 -- recupera o valor target do ponteiro 
                                 return (getPointerValueFromState val (length stars) s, stars ++ (idd:idTokens))
@@ -929,11 +991,14 @@ derefPointerParserWrite = (do   stars <- many1 starToken -- lendo PELO MENOS UMA
                                 (modifiers, (idd:idTokens)) <- idParser -- recupera o idd e os modifiers semanticos
                                 s <- getState
 
+                                -- liftIO (print ("MODIFIEERSSS"))
+                                -- liftIO(print modifiers)
+
                                 if (isExecOn s) then do -- se o exec tiver on
                                   -- recupera o valor representado por idParser (idd + modifiers)
                                   -- esse valor DEVE ser um ponteiro
                                   val <- (return (getValFromValAndModifiers (getValFromState (getStringFromId idd,
-                                              getScope s, NULL) s) modifiers))
+                                              getScope s, NULL) s) modifiers s))
 
                                   -- recupera o valor target do penultimo ponteiro usnado as estrelas
                                   -- o valor do penultimo ponteiro contem o endereco da varaivel que sera modificada
@@ -1004,6 +1069,11 @@ funcallOpParser idd  parent = (do   leftParen <- leftParenToken
 
                                       -- (3) incrementando o contador de subprogramas
                                       s <- updateAndGetState incrActiveSubprCounter
+
+                                      -- liftIO(print("Aaaaaaaaaa"))
+                                      -- liftIO(print(argsList))
+                                      -- liftIO(print("bbbbbbbbbbb"))
+                                      -- liftIO(print(valArgs))
 
                                       -- parsing e declaracao dos argumentos do subprog
                                       s <- updateAndGetState (declareArgs (getScope s) argsList valArgs)
@@ -1105,7 +1175,6 @@ remainingArgsParser = (do   comma <- commaToken
 commandWithRetParser :: ParsecT [Token] OurState IO(Type, [Token])
 commandWithRetParser = (do  x <- subStrParser <|> castParser <|> lenParser <|> allocParser <|> addrParser
                             return x)
-
 
 -- <cast> -> CAST LEFT_PAREN <expr> COMMA <type> RIGHT_PAREN
 castParser :: ParsecT [Token] OurState IO(Type, [Token])
@@ -1234,13 +1303,15 @@ printParser = (do printt <- printToken
 
                   s <- getState
                   if isExecOn s then do -- so executa se exec tiver on 
-                      if(assertType val (IntType 0) ||
-                        assertType val (DoubleType 0.0) ||
-                        assertType val (BoolType False) ||
-                        assertType val (StringType "")) then do
-                        liftIO (print s)
-                        liftIO (print val)
-                      else undefined
+                      -- if(assertType val (IntType 0) ||
+                      --   assertType val (DoubleType 0.0) ||
+                      --   assertType val (BoolType False) ||
+                      --   assertType val (StringType "")) then do
+                      -- liftIO (print s)
+                      -- x <- getInput
+                      -- liftIO(print(x))
+                      liftIO (print val)
+                      -- else undefined
                   else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))
@@ -1267,9 +1338,30 @@ readOpParser = (do  (modifiers, (idd:tokens)) <- idParser -- ID NORMAL, SEM DERE
                       -- 1. tem que descobrir o tipo da variavel que ta sendo lida (getValFromState)
                       -- 2. tem que converter da string pra esse tipo (convertStringToType) TODO:EMISSAO ERRO DE PARSING PARA TIPO
                       -- 3. tem que fazer o update na memoria -- TODO : COMPATIBILDIADE
-                      s <- updateAndGetState(memTable UPDATE modifiers (getStringFromId idd,
-                            getScope s, convertStringToType readVal (getValFromState (getStringFromId idd,
-                            getScope s, NULL) s)))
+                      (left, right) <- (return (getLastModifiersSepByArrow modifiers))
+
+
+                      if((left == []) && (not (headEqualsToP2SAM right))) then do -- a gnt nao tem setinha
+                        idVal <- (return ((getValFromState (getStringFromId idd, getScope s, NULL) s)))
+                        oldVal <- (return (getValFromValAndModifiers idVal right s))
+                        newVal <- (return (convertStringToType readVal oldVal))
+                        s <- updateAndGetState(memTable UPDATE modifiers (getStringFromId idd, getScope s, newVal))
+                        pure()
+                      else do
+                        -- liftIO (print(s))
+                        currVal <- (return (getValFromState (getStringFromId idd, getScope s, NULL) s))
+                        currVal <- (return (getValFromValAndModifiers currVal left s))
+
+                        (targetIdd, targetSp, _) <- (return (getAddrFromPointer currVal))
+
+                        -- so que nao eh pra checar subpr ativo etc
+                        idVal <- (return ((getExactValFromState (targetIdd, targetSp, NULL) s)))
+                        oldVal <- (return (getValFromValAndModifiers idVal (alterModifiersHead right) s))
+                        newVal <- (return (convertStringToType readVal oldVal))
+
+                        -- currVal eh um ponteiro cujo valor guaradado no endereco apontando vai ser modificado
+                        s <- updateAndGetState(memTable UPDATE_EXACT (alterModifiersHead right) (targetIdd, targetSp, newVal))
+                        pure ()
                       pure ()
                     else pure ()
                     return ((idd:tokens) ++ [rightParen])) <|>
@@ -1319,11 +1411,24 @@ assignmentParser = (do  (modifiers, (idd:idTokens)) <- idParser
 
                         s <- getState
                         if(isExecOn s) then do -- so modifica de exec tiver on
-                          s <- updateAndGetState(memTable UPDATE modifiers (getStringFromId idd, getScope s, exprVal))
-                          pure ()
+                          (left, right) <- (return (getLastModifiersSepByArrow modifiers))
+
+                          if((left == []) && (not (headEqualsToP2SAM right))) then do -- a gnt nao tem setinha
+                            s <- updateAndGetState(memTable UPDATE modifiers (getStringFromId idd, getScope s, exprVal))
+                            pure()
+                          else do
+                            -- liftIO (print(s))
+                            currVal <- (return (getValFromState (getStringFromId idd, getScope s, NULL) s))
+                            currVal <- (return (getValFromValAndModifiers currVal left s))
+
+                            (targetIdd, targetSp, _) <- (return (getAddrFromPointer currVal))
+
+                            -- currVal eh um ponteiro cujo valor guaradado no endereco apontando vai ser modificado
+                            s <- updateAndGetState(memTable UPDATE_EXACT (alterModifiersHead right) (targetIdd, targetSp, exprVal))
+                            pure ()
                         else do pure ()
 
-                        return (idTokens ++ assignExpr)) <|>
+                        return ((idd:idTokens) ++ assignExpr)) <|>
                    (do  pure()
                         -- parser do deref retornando addr da var cujo valor sera modificado
                         ((idd, sp, _), derefTokens) <- derefPointerParserWrite 

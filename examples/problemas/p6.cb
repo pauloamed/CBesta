@@ -1,0 +1,127 @@
+struct Node{
+    Int val;
+    Pointer<Node> left, right;
+}
+
+func Pointer<Node> createNode(Int x){
+    Pointer<Node> ret := alloc(Node);
+    ret->val := x;
+    return ret;
+}
+
+func Bool isNull(Pointer<Node> x){
+    return (x == NULL);
+}
+
+proc addVal(Pointer<Node> curr, Int x){
+    // print("");
+    if(x <= curr->val){
+        if(isNull(curr->left)){
+            curr->left := createNode(x);
+        }else{
+            addVal(curr->left, x);
+        }
+    }else{
+        if(isNull(curr->right)){
+            curr->right := createNode(x);
+        }else{
+            addVal(curr->right, x);
+        }
+    }
+    return;
+}
+
+
+func Int getMinVal(Pointer<Node> head, Pointer<Int> minVal){
+    Int level := 0;
+    if(isNull(head)){
+        print("Ai nao da ne...");
+        return -1;
+    }else{
+        while(!(isNull(head->left))){
+            head := head->left;
+            level := level + 1;
+        }
+
+        *minVal := head->val;
+        return level;
+    }
+}
+
+
+func Int getMaxVal(Pointer<Node> head, Pointer<Int> maxVal){
+    Int level := 0;
+    if(isNull(head)){
+        print("Ai nao da ne...");
+        return -1;
+    }else{
+        while(!isNull(head->right)){
+            head := head->right;
+            level := level + 1;
+        }
+
+        *maxVal := head->val;
+        return level;
+    }
+}
+
+
+proc bfs(Pointer<Node> head){
+    print("");
+    Array<1000, Pointer<Node>> fila;
+    Array<1000, Int> lvl;
+    Int currTop := 0;
+    Int currBottom := 1;
+    fila[0] := head;
+    lvl[0] := 0;
+
+
+    while(currTop < currBottom){
+        if(!isNull(fila[currTop]->right)){
+            fila[currBottom] := fila[currTop]->right;
+            lvl[currBottom] := lvl[currTop] + 1;
+            currBottom := currBottom + 1;
+        }
+        if(!isNull(fila[currTop]->left)){
+            fila[currBottom] := fila[currTop]->left;
+            lvl[currBottom] := lvl[currTop] + 1;
+            currBottom := currBottom + 1;
+        }
+
+        currTop := currTop + 1;
+    }
+
+    Int lastLvl := 0;
+    for(Int i := 0; i < currBottom; i := i + 1){
+        if(lastLvl != lvl[i]){
+            print("");
+        }
+        print(fila[i]->val);
+        lastLvl := lvl[i];
+    }
+    return;
+}
+
+
+Int n; read(n);
+Pointer<Node> head;
+while(n > 0){
+    Int x; read(x);
+    if(isNull(head)){
+        head := createNode(x);
+    }else{
+        addVal(head, x);
+    }
+    n := n - 1;
+}
+
+Pointer<Int> minVal := alloc(Int);
+Pointer<Int> maxVal := alloc(Int);
+
+Int minDeep := getMinVal(head, minVal);
+print("O valor minimo eh: " + cast(*minVal, String) + " na altura " + cast(minDeep, String));
+
+Int maxDeep := getMaxVal(head, maxVal);
+print("O valor maximo eh: " + cast(*maxVal, String) + " na altura " + cast(maxDeep, String));
+
+bfs(head);

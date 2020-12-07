@@ -58,6 +58,7 @@ tokens :-
 --------------------- OPERADORES  --------------------------
 
     :=                                      { \p s -> Assign p }
+    "->"                                    { \p s -> Arrow p }
     "%"                                     { \p s -> Mod p }
     \^                                      { \p s -> Expo p }
     \+                                      { \p s -> Plus p }
@@ -81,7 +82,7 @@ tokens :-
     (\|\| | or)                             { \p s -> Or p }
 
 -------------------- LITERALS --------------------------
-
+    NULL                                    { \p s -> Null p }
     $digit+\.$digit+                        { \p s -> DoubleLit p (read s) }
     $digit+                                 { \p s -> IntLit p (read s) }
     ("true" | "false")                      { \p s -> BoolLit p (boolVal s) }
@@ -139,6 +140,7 @@ data Token =
     LeftBracket AlexPosn |
     RightBracket AlexPosn |
 -- OPERADORES  -----------------------------------------
+    Arrow AlexPosn |
     Assign AlexPosn |
     Mod  AlexPosn |
     Expo AlexPosn |
@@ -163,6 +165,7 @@ data Token =
     Or AlexPosn |
 -- LITERALS  -------------------------------------------
     DoubleLit AlexPosn Double |
+    Null AlexPosn |
     IntLit AlexPosn Int |
     BoolLit AlexPosn Bool |
     StringLit AlexPosn String |

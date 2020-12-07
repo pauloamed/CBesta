@@ -29,11 +29,11 @@ na linha 13 de `parser.hs`
 
 
 FALAR COM UMBERTO:
-  STRUCT RECURSIVA
-  PROBLEMA 4 TIPO RATIONAL_T (MAISCULO)
-  B != 0? (P4)
   COMO REPRESENTAR ERROS: FAIL? UNDEF?
   PRINTAR NEWLINE
+
+
+  update da varaivel na heap n tem updt user type
 
 
 
@@ -41,10 +41,6 @@ TODO
 -- finalziar documentacao
 
 -- revisao pra ver o q precisa mudar (compatibilidade)
-
--- ver se acessos ao estado estao com execOn como premissa
-
---- ctrl f nos get e ver se tao dentro de isExecOn
 
 
 

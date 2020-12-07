@@ -10,9 +10,6 @@ import Lexer
 import Control.Monad.IO.Class
 
 import Scope
-
-import UserTypeAuxMemTable
-
 import BasicExecUtils
 
 --------------------------------------------------------------------------------
@@ -45,6 +42,13 @@ getValFromReturn (idd, "$$$", _) ((l, _), _, _, _, _, _, _) =
 getValFromReturn _ _ = undefined
 
 
+-- passando id e escopo de variavel
+getExactValFromState :: VarParam -> OurState -> Type
+getExactValFromState (idd, sp, _) ((l, _), _, _, _, _, _, _) = 
+    getExactTypeFromIdAndScope (idd, sp) l
+getExactValFromState _ _ = undefined
+
+
 -- funcao recursiva para pegar valor de deref pointer. aux de getPointerValueFromState
 getPointerValueFromList :: Type -> Int -> [Var] -> Type
 getPointerValueFromList (PointerType (typee, (idd, sp))) 0 l = (PointerType (typee, (idd, sp)))
@@ -58,7 +62,7 @@ getPointerValueFromList _ _ _ = undefined
 getPointerValueFromState :: Type -> Int -> OurState -> Type
 getPointerValueFromState (PointerType x) numQueries ((l, _), _, _, _, _, _, _) =
           getPointerValueFromList (PointerType x) numQueries l
-getPointerValueFromState _ _ _ = undefined  
+getPointerValueFromState _ _ _ = undefined
 
 
 -- buscar somente pro variaveis que batem escopo e id 
@@ -168,9 +172,12 @@ filterOnlyActiveVars x ((idA, spA, (typeA, counterA) : tailA):tailVars) =
 
 
 memTable :: Operation -> [AccessModifier] -> VarParam -> OurState -> OurState
+-- update para variaveis no escopo normal
+memTable UPDATE_EXACT modfs x ((l, counter), subp, t, sp, True, contSubpr, loopStack) =
+    ((updateMemTableExact x modfs l, counter), subp, t, sp, True, contSubpr, loopStack)
 -- update para varaiveis na heap
 memTable UPDATE modfs (idd, "$$", newVal) ((l, counter), subp, t, sp, True, contSubpr, loopStack) =
-     ((updateMemTableHeap (idd, "$$", newVal) l, counter), subp, t, sp, True, contSubpr, loopStack)
+     ((updateMemTableExact (idd, "$$", newVal) modfs l, counter), subp, t, sp, True, contSubpr, loopStack)
 -- update para variaveis no escopo normal
 memTable UPDATE modfs x ((l, counter), subp, t, sp, True, contSubpr, loopStack) =
     ((updateMemTable x contSubpr modfs l, counter), subp, t, sp, True, contSubpr, loopStack)
@@ -238,8 +245,8 @@ updateMemTable x counterActive modfs l = updateMemTableAux x (getVarToUpdate cou
 updateMemTableAux :: VarParam -> Var -> [AccessModifier] -> [Var] -> [Var]
 updateMemTableAux _ _ _ [] = undefined
 updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
-                    if (idVar == idB) && (spVar == spB) then 
-                      if (modfs == []) then 
+                    if (idVar == idB) && (spVar == spB) then  
+                      if (modfs == []) then
                         if(getDefaultValue(typeA) == getDefaultValue(typeHeadB)) then
                           (idVar, spVar, (typeA, counterHeadB) : valListB) : l
                         else
@@ -253,18 +260,60 @@ updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs ((idB, spB, (typeHea
 -----------------------------------------------------------------------------------------
 
 
-updateMemTableHeap :: VarParam -> [Var] -> [Var]
-updateMemTableHeap (idA, spA, typeA) ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
+updateMemTableExact :: VarParam -> [AccessModifier] -> [Var] -> [Var]
+updateMemTableExact (idA, spA, typeA) modfs ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
                     if (idA == idB) && (spA == spB) then do
-                      if(getDefaultValue(typeA) == getDefaultValue(typeHeadB)) then
-                        ((idA, spA, (typeA, counterHeadB) : valListB) : l)
-                      else
-                        undefined
+                      if (modfs == []) then 
+                        if(getDefaultValue(typeA) == getDefaultValue(typeHeadB)) then
+                          ((idA, spA, (typeA, counterHeadB) : valListB) : l)
+                        else
+                          undefined
+                      else (idA, spA, (updateUserType typeHeadB modfs typeA, counterHeadB) : valListB) : l
                     else 
-                      (((idB, spB, (typeHeadB, counterHeadB) : valListB)) : updateMemTableHeap (idA, spA, typeA) l)
-updateMemTableHeap _ _ = undefined
+                      (((idB, spB, (typeHeadB, counterHeadB) : valListB)) : updateMemTableExact (idA, spA, typeA) modfs l)
+updateMemTableExact _ _ _ = undefined
 
 
+-----------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
+
+-- esse ngc com pointer type nao pode ser recursivo usando memtableaux
 
 
+updateUserType :: Type -> [AccessModifier] -> Type -> Type
+updateUserType (StructType (idd, fields)) modfs newVal = updateStruct (StructType (idd, fields)) modfs newVal
+updateUserType (ArrayType (size, elements)) modfs newVal = updateArray (ArrayType (size, elements)) modfs newVal
+updateUserType _ _ _ = undefined -- o tipo salvo tem que ser struct ou array
 
+
+updateArray :: Type -> [AccessModifier] -> Type -> Type
+updateArray (ArrayType (size, elements)) ((ArrayAM index):tailModf) newVal =
+    (ArrayType (size, updateArrayElementsList elements ((ArrayAM index):tailModf) newVal))
+updateArray _ _ _ = undefined
+
+
+updateArrayElementsList :: [Type] -> [AccessModifier] -> Type -> [Type]
+updateArrayElementsList (typesHead:typesTail) ((ArrayAM index):tailModf) newVal = 
+  if (index == 0) then do
+    if (tailModf == []) then do (newVal:typesTail)
+    else ((updateUserType typesHead tailModf newVal) : typesTail)
+  else (typesHead:(updateArrayElementsList (typesTail) ((ArrayAM (index-1)):tailModf) newVal))
+
+
+---------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------
+
+
+updateStruct :: Type -> [AccessModifier] -> Type -> Type
+updateStruct (StructType (idd, fields)) ((StructAM fieldName):tailModf) newVal =
+    (StructType (idd, updateStructFieldsList fields ((StructAM fieldName):tailModf) newVal))
+updateStruct _ _ _ = undefined
+
+
+updateStructFieldsList :: [(String, Type)] -> [AccessModifier] -> Type -> [(String, Type)]
+updateStructFieldsList [] ((StructAM fieldName):tailModf) newVal = undefined
+updateStructFieldsList ((currFieldName, currFieldVal):fieldsTail) ((StructAM fieldName):tailModf) newVal = 
+  if (currFieldName == fieldName) then do
+    if (tailModf == []) then do ((fieldName, newVal):fieldsTail)
+    else ((fieldName, (updateUserType currFieldVal tailModf newVal)) : fieldsTail)
+  else ((currFieldName, currFieldVal):(updateStructFieldsList (fieldsTail) ((StructAM fieldName):tailModf) newVal))

@@ -6,6 +6,45 @@ import OurType
 import Lexer
 import Text.Parsec
 
+-- x.y.z
+
+
+headEqualsToP2SAM :: [AccessModifier] -> Bool
+headEqualsToP2SAM ((P2SAM x):amTail) = True
+headEqualsToP2SAM (amHead:amTail) = False
+headEqualsToP2SAM [] = False
+
+
+
+splitAccessModifiersAtLastArrow :: [AccessModifier] -> [[AccessModifier]]
+splitAccessModifiersAtLastArrow [] = [[]]
+splitAccessModifiersAtLastArrow ((P2SAM field):tailC) = 
+          ([]:[P2SAM field]: splitAccessModifiersAtLastArrow tailC)
+splitAccessModifiersAtLastArrow (x:tailC) = 
+          (x: (head (splitAccessModifiersAtLastArrow tailC))) : (tail (splitAccessModifiersAtLastArrow tailC))
+
+
+getLastModifiersSepByArrow :: [AccessModifier] -> ([AccessModifier], [AccessModifier])
+getLastModifiersSepByArrow x = 
+  (reverse (fst (getLastModifiersSepByArrowAux (reverse x))),
+      reverse (snd (getLastModifiersSepByArrowAux (reverse x))))
+
+getLastModifiersSepByArrowAux :: [AccessModifier] -> ([AccessModifier], [AccessModifier])
+getLastModifiersSepByArrowAux [] = ([], [])
+getLastModifiersSepByArrowAux ((P2SAM field):tail) = (tail, [(P2SAM field)])
+getLastModifiersSepByArrowAux (x:tail) = 
+        ((fst (getLastModifiersSepByArrowAux tail)), (x:(snd (getLastModifiersSepByArrowAux tail))))
+
+
+alterModifiersHead :: [AccessModifier] -> [AccessModifier]
+alterModifiersHead ((P2SAM x):amTail) = (StructAM x):amTail
+alterModifiersHead (amHead:amTail) = amHead:amTail
+
+
+------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------
+
+
 
 assertType :: Type -> Type -> Bool
 assertType val typee = (getDefaultValue(val) == getDefaultValue(typee))
@@ -57,7 +96,16 @@ getDefaultValue (DoubleType _) = (DoubleType 0.0)
 getDefaultValue (BoolType _) = (BoolType False)
 getDefaultValue (StringType _) = (StringType "")
 getDefaultValue (StructType (idd, _)) = (StructType (idd, []))
-getDefaultValue (PointerType (typee, _)) = (PointerType (typee, ("","")))
+
+getDefaultValue (PointerType (IntType x, _)) = (PointerType (IntType x, ("","")))
+getDefaultValue (PointerType (DoubleType x, _)) = (PointerType (DoubleType x, ("","")))
+getDefaultValue (PointerType (BoolType x, _)) = (PointerType (BoolType x, ("","")))
+getDefaultValue (PointerType (StringType x, _)) = (PointerType (StringType x, ("","")))
+getDefaultValue (PointerType ((StructType (idd, _)), _)) = 
+        (PointerType ((StructType (idd, [])), ("","")))
+
+getDefaultValue (PointerType (typee, _)) = (PointerType (NULL, ("","")))
+
 getDefaultValue (ArrayType (sizee, (arrayType:_))) = (ArrayType (sizee, [getDefaultValue arrayType]))
 getDefaultValue NULL = NULL
 

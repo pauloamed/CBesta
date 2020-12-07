@@ -30,9 +30,15 @@ instance Show Type where
 
 data AccessModifier =
     StructAM String |
-    ArrayAM Int
+    ArrayAM Int |
+    P2SAM String 
     deriving(Eq)
 
+instance Show AccessModifier where
+    show (StructAM field) = (show "(STRUCT_AM") ++ " " ++ (show field) ++ ")"
+    show (ArrayAM index) = (show "(ARRAY_AM") ++ " " ++ (show index) ++ ")"
+    show (P2SAM field) = (show "(P2S_AM") ++ " " ++ (show field) ++ ")"
+-- P2SAM: pointer to strcut access modifier
 
 data LoopControlType =
     OK |
