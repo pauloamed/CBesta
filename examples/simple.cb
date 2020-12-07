@@ -1,10 +1,1 @@
-
-
-foo(impar,par){
-    
-    {
-        x := 10;
-    }
-
-    Int x;
-}
+Int x := 1;

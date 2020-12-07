@@ -1,0 +1,22 @@
+READ:
+    somente tipos primitivos
+    nao conseguir converter a string pro tipo desejado
+    ASSIGN: deixa pro update
+
+MATCHING DE TIPOS NA CHAMADA DE SUBPR:
+    pode dar erro
+
+
+INSERCAO DE STRUCT QUE JA EXISTE
+INSERCAO DE SUBPR QUE JA EXISTE
+
+
+ERRO:
+    intervalos substr
+    addr nao achou o id soliciatdo
+    variavel nao achada
+    tipo_Def_usario nao achou
+    dupla declaracao
+    chamada de funcao como proc e vice-versa
+    continue/break/return solto no meio do codigo
+    free tem que ser na heap

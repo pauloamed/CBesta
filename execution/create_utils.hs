@@ -21,11 +21,10 @@ createPointer :: Type -> Type
 createPointer t = (PointerType (t, ("", "")))
 
 
-createArray :: Type -> Type -> Type
-createArray (IntType x) elemType =
+createArray :: Int -> Type -> Type
+createArray x elemType =
       if x > 0 then do (ArrayType (x, createTypeList x elemType))
       else undefined
-createArray _ _ = undefined
 
 
 createTypeList :: Int -> Type -> [Type]

@@ -6,22 +6,9 @@ import OurType
 import Lexer
 import Text.Parsec
 
-import MemTable
 
-
------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------
-
--- fa: formal args, aa: actual args
-declareArgs :: String -> [(String, Type)] -> [Type] -> OurState -> OurState
-declareArgs sp (faHead:faTail) [] s = undefined
-declareArgs sp [] (aaHead:aaTail) s = undefined
-declareArgs sp [] [] s = s
-declareArgs sp ((idFaHead, typeFaHead):faTail) (aaHead:aaTail) s =
-    if ((getDefaultValue typeFaHead) == (getDefaultValue aaHead)) then do
-      memTable INSERT [] (idFaHead, sp, aaHead) (declareArgs sp faTail aaTail s)
-    else do
-      undefined
+assertType :: Type -> Type -> Bool
+assertType val typee = (getDefaultValue(val) == getDefaultValue(typee))
 
 
 -----------------------------------------------------------------------------------------------

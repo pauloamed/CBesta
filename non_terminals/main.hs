@@ -352,13 +352,23 @@ whileParser =   (do   while <- whileToken
                         -- ja que esses serao reinseridos no processamento do loop
 
                         (_, enclosedExpr) <- enclosedExprParser -- a expr de controle
+
                         (hasReturn, enclosedBlocks) <- enclosedBlocksParser -- o corpo
 
                         s <- updateAndGetState (turnExecOn) -- ligo novamente
                         
                         s <- updateAndGetState (addToCurrentScope whileScope) -- adiciono while ao escopo
                         executeLoop([], enclosedExpr, [], enclosedBlocks) -- EXECUCAO DO LOOP DE FACTO
-                        s <- updateAndGetState (removeFromCurrentScope) -- removendo whiel do escopo
+
+                        s <- getState
+                        if((isExecOn s)) then do
+                          s <- updateAndGetState (removeFromCurrentScope) -- removendo whiel do escopo
+                          pure()
+                        else do
+                          s <- updateAndGetState (turnExecOn) -- ligo novamente
+                          s <- updateAndGetState (removeFromCurrentScope) -- removendo whiel do escopo
+                          s <- updateAndGetState (turnExecOff) -- ligo novamente
+                          pure()
 
                         return (False, while:enclosedExpr ++ enclosedBlocks) 
                         -- whiles, mesmo se parenco com ifs, podem nunca ser executados,
@@ -450,6 +460,9 @@ loopRecursiveExecution (condExpr, loopBinding, body) =
           -- parsing de condicao a fim de checar valor
           (condValue, _) <- exprParser
 
+          if(not (assertType condValue (BoolType False))) then 
+            undefined
+          else pure()
           -- TODO: compatibilidade
           -- se a expr foi avaliada como true, queremos executar o loop
           if ((getBoolValue condValue) == True) then do
@@ -548,6 +561,7 @@ ifParser =  (do   iff <- ifToken
                   s <- getState -- recupera o estado atual
 
 
+
                  
                   if (not (isExecOn s)) then do
                     -- se o exec tiver OFF
@@ -558,6 +572,9 @@ ifParser =  (do   iff <- ifToken
                     (hasReturnElse, maybeElse) <- maybeElseParser
                     return ((hasReturn && hasReturnElse), iff:enclosedExpr ++ enclosedBlocks ++ maybeElse)
                   else do
+                    if(not (assertType (BoolType False) exprValue)) then 
+                      undefined
+                    else pure()
                     -- se o exec tiver ON
                       -- se a condicao do IF for verdadeira
                         -- execute o corpo do IF
@@ -575,7 +592,15 @@ ifParser =  (do   iff <- ifToken
 
                       s <- getState -- recupera estado updt
 
-                      s <- updateAndGetState removeFromCurrentScope -- remove IF do escpo
+                      s <- getState
+                      if((isExecOn s)) then do
+                        s <- updateAndGetState (removeFromCurrentScope) -- removendo whiel do escopo
+                        pure()
+                      else do
+                        s <- updateAndGetState (turnExecOn) -- ligo novamente
+                        s <- updateAndGetState (removeFromCurrentScope) -- removendo whiel do escopo
+                        s <- updateAndGetState (turnExecOff) -- ligo novamente
+                        pure()
 
                       -- se o exec foi pra OFF durante execucao do corpo do IF
                       if(not(isExecOn s)) then do -- exec ficou falso durante o processametno do if
@@ -604,7 +629,14 @@ maybeElseParser = (do   elsee <- elseToken
                           updateAndGetState (addToCurrentScope elseScope) -- adicona o escopo do else
                           (hasReturn, ifOrEnclosed) <- ifParser <|> enclosedBlocksParser
                           s <- getState -- pegando estado atualizado
-                          s <- updateAndGetState removeFromCurrentScope -- removendo o esocpo do else
+                          if((isExecOn s)) then do
+                            s <- updateAndGetState (removeFromCurrentScope) -- removendo whiel do escopo
+                            pure()
+                          else do
+                            s <- updateAndGetState (turnExecOn) -- ligo novamente
+                            s <- updateAndGetState (removeFromCurrentScope) -- removendo whiel do escopo
+                            s <- updateAndGetState (turnExecOff) -- ligo novamente
+                            pure()
                           return (hasReturn, elsee:ifOrEnclosed)
                         else do
                           (hasReturn, ifOrEnclosed) <- ifParser <|> enclosedBlocksParser
@@ -637,12 +669,21 @@ typeParser = (do  pure()
                   else return (NULL, [idd])) <|>
              (do  array <- arrayToken -- processamento de array
                   lessThan <- lessThanToken
-                  (arraySize, size) <- exprParser -- tamanho do array TODO: compatibilidade
+
+                  (arraySizeVal, size) <- exprParser -- tamanho do array TODO: compatibilidade
                   comma <- commaToken
                   (semanType, typeToken) <- typeParser -- chamada recursiva pra processar o tipo do array
                   greaterThan <- greaterThanToken
-                  -- criacao de um array usando seu tamanho e o tipo processado
-                  return (createArray arraySize semanType, (array:lessThan:typeToken ++ comma:size ++ [greaterThan]))) <|>
+
+                  s <- getState
+                  if(isExecOn s) then do
+                    if(not (assertType arraySizeVal (IntType 0))) then do
+                      undefined
+                    else pure()
+                    arraySize <- (return (getIntValue arraySizeVal))
+                    -- criacao de um array usando seu tamanho e o tipo processado
+                    return (createArray arraySize semanType, (array:lessThan:typeToken ++ comma:size ++ [greaterThan]))
+                  else return(NULL, (array:lessThan:typeToken ++ comma:size ++ [greaterThan]))) <|>
              (do  x <- pointerToken -- processamento deu um ponteiro
                   lessThan <- lessThanToken
                   (semanType, typeToken) <- typeParser -- chamada recursiva para procesar tipo para o qual o ponteiro aponta
@@ -1014,7 +1055,7 @@ returnParser = (do  ret <- returnToken -- token (RETURN)
 
                       x <- (return (getStringFromSubprCounter s))
                       
-                      if(x == "0") then undefined
+                      if(x == "0") then undefined -- TODO: controle de msg de erro
                       else pure ()
 
                       -- adicionar o valor a ser retornado na variavel temporaria para essa funcao
@@ -1122,7 +1163,9 @@ lenParser = ( do  len <- lenToken
 
                   s <- getState
                   if(isExecOn s) then -- so executa a consulta se exec tiver on
-                    return (getLen exprVal, len:leftParen:expr ++ [rightParen])
+                    if(assertType exprVal (StringType "") || assertType exprVal (ArrayType (0,[]))) then
+                      return (getLen exprVal, len:leftParen:expr ++ [rightParen])
+                    else undefined
                   else  return (NULL, len:leftParen:expr ++ [rightParen]))
 
 
@@ -1141,7 +1184,9 @@ subStrParser = (do  substr <- substrToken
 
                     s <- getState
                     if(isExecOn s) then -- so corto a string se exec tiver on
-                      return (getSubstr leftVal rightVal strVal, substr:lp:str ++ c1:left ++ c2:right ++ [rp])
+                      if(assertType strVal (StringType "")) then
+                        return (getSubstr leftVal rightVal strVal, substr:lp:str ++ c1:left ++ c2:right ++ [rp])
+                      else undefined
                     else
                       return (NULL, substr:lp:str ++ c1:left ++ c2:right ++ [rp]))
 
@@ -1189,8 +1234,13 @@ printParser = (do printt <- printToken
 
                   s <- getState
                   if isExecOn s then do -- so executa se exec tiver on 
-                      liftIO (print s)
-                      liftIO (print val) -- 
+                      if(assertType val (IntType 0) ||
+                        assertType val (DoubleType 0.0) ||
+                        assertType val (BoolType False) ||
+                        assertType val (StringType "")) then do
+                        liftIO (print s)
+                        liftIO (print val)
+                      else undefined
                   else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))
@@ -1317,7 +1367,15 @@ declrsParser parent = (do   (semanType, typee) <- typeParser
                             idd <- idToken -- aqui eh tokens mesmo
 
                             (val, maybeAssignExpr) <- maybeAssignExprParser parent
-                                                      
+
+                            s <- getState
+
+                            if(isExecOn(s)) then do
+                              if((getDefaultValue(val) /= getDefaultValue(semanType)) &&
+                                    (val /= NULL)) then
+                                undefined
+                              else pure()
+                            else pure()                      
 
                             (tailDeclr, tokens) <- remainingDeclrsParser semanType parent
 
@@ -1330,7 +1388,6 @@ declrsParser parent = (do   (semanType, typee) <- typeParser
                             -- a fim de poder usar esses valores na construcao de um struct
 
                             -- pode ser que VAL == NULL: a variavel inicial nao foi inicializada
-
                             s <- getState
                             if isExecOn s then do -- checando se flag de execucao ta on
                               if val == NULL then do
@@ -1362,6 +1419,14 @@ remainingDeclrsParser typee parent =
               idd <- idToken -- aqui eh token mesmo
               (val, maybeAssignExpr) <- maybeAssignExprParser parent
               -- TODO: struct valor padrao pode dar ruim
+
+              s <- getState
+              if(isExecOn(s)) then do
+                if(getDefaultValue(val) /= getDefaultValue(typee) &&
+                                    val /= NULL) then
+                  undefined
+                else pure()
+              else pure()   
 
               -- pode ser que VAL == NULL: a variavel nao foi inicializada
 

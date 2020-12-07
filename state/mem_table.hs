@@ -13,7 +13,7 @@ import Scope
 
 import UserTypeAuxMemTable
 
-
+import BasicExecUtils
 
 --------------------------------------------------------------------------------
 ----------------------------------  GETTER   -----------------------------------
@@ -51,6 +51,7 @@ getPointerValueFromList (PointerType (typee, (idd, sp))) 0 l = (PointerType (typ
 getPointerValueFromList (PointerType (typee, (idd, sp))) 1 l = getExactTypeFromIdAndScope (idd, sp) l
 getPointerValueFromList (PointerType (typee, (idd, sp))) n l = 
         getPointerValueFromList (getExactTypeFromIdAndScope (idd, sp) l) (n-1) l
+getPointerValueFromList _ _ _ = undefined
 
 
 -- funcao para pegar valor de deref pointer.
@@ -188,6 +189,17 @@ memTable _ _ _ _ = undefined
 -----------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------
 
+-- fa: formal args, aa: actual args
+declareArgs :: String -> [(String, Type)] -> [Type] -> OurState -> OurState
+declareArgs sp (faHead:faTail) [] s = undefined
+declareArgs sp [] (aaHead:aaTail) s = undefined
+declareArgs sp [] [] s = s
+declareArgs sp ((idFaHead, typeFaHead):faTail) (aaHead:aaTail) s =
+    if ((getDefaultValue typeFaHead) == (getDefaultValue aaHead)) then do
+      memTable INSERT [] (idFaHead, sp, aaHead) (declareArgs sp faTail aaTail s)
+    else do
+      undefined
+
 
 insertMemTable :: Int -> VarParam -> [Var] -> [Var]
 insertMemTable activeSubpr (idA, spA, typeA) []  = [(idA, spA, [(typeA, activeSubpr)])]
@@ -227,7 +239,11 @@ updateMemTableAux :: VarParam -> Var -> [AccessModifier] -> [Var] -> [Var]
 updateMemTableAux _ _ _ [] = undefined
 updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
                     if (idVar == idB) && (spVar == spB) then 
-                      if (modfs == []) then (idVar, spVar, (typeA, counterHeadB) : valListB) : l
+                      if (modfs == []) then 
+                        if(getDefaultValue(typeA) == getDefaultValue(typeHeadB)) then
+                          (idVar, spVar, (typeA, counterHeadB) : valListB) : l
+                        else
+                          undefined
                       else (idVar, spVar, (updateUserType typeHeadB modfs typeA, counterHeadB) : valListB) : l
                     else 
                       (idB, spB, (typeHeadB, counterHeadB) : valListB) : updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs l
@@ -240,7 +256,10 @@ updateMemTableAux (idA, spA, typeA) (idVar, spVar, x) modfs ((idB, spB, (typeHea
 updateMemTableHeap :: VarParam -> [Var] -> [Var]
 updateMemTableHeap (idA, spA, typeA) ((idB, spB, (typeHeadB, counterHeadB) : valListB) : l) =
                     if (idA == idB) && (spA == spB) then do
-                      ((idA, spA, (typeA, counterHeadB) : valListB) : l)
+                      if(getDefaultValue(typeA) == getDefaultValue(typeHeadB)) then
+                        ((idA, spA, (typeA, counterHeadB) : valListB) : l)
+                      else
+                        undefined
                     else 
                       (((idB, spB, (typeHeadB, counterHeadB) : valListB)) : updateMemTableHeap (idA, spA, typeA) l)
 updateMemTableHeap _ _ = undefined
