@@ -1,8 +1,9 @@
-struct Rational_t{
+struct Rational_t {
     Int numerador, denominador;
 }
 
-func Rational_t createRat(Int a, Int b){
+// A)
+func Rational_t createRat(Int a, Int b) {
     Rational_t ret;
     ret.numerador := a;
     ret.denominador := b;
@@ -10,11 +11,12 @@ func Rational_t createRat(Int a, Int b){
     return ret;
 }
 
-func Bool areEqual(Rational_t a, Rational_t b){
+// B)
+func Bool areEqual(Rational_t a, Rational_t b) {
     Int num1 := a.numerador * b.denominador;
     Int num2 := a.denominador * b.numerador;
 
-    return ((num1 == num2));
+    return num1 == num2;
 }
 
 Rational_t x := createRat(1, 1);
@@ -23,3 +25,34 @@ Rational_t z := createRat(3, 2);
 
 print(areEqual(x, y));
 print(areEqual(x, z));
+
+// C)
+func Rational_t addRats(Rational_t a, Rational_t b) {
+    Int num := a.numerador * b.denominador + a.denominador * b.numerador;
+    Int den := a.denominador * b.denominador;
+
+    return createRat(num, den);
+}
+
+func Rational_t negateRat(Rational_t a) {
+    return createRat(a.numerador * -1, a.denominador * -1);
+}
+
+func Rational_t subtractRats(Rational_t a, Rational_t b) {
+    Int num := a.numerador * b.denominador - a.denominador * b.numerador;
+    Int den := a.denominador * b.denominador;
+
+    return createRat(num, den);
+}
+
+func Rational_t multiplyRats(Rational_t a, Rational_t b) {
+    return createRat(a.numerador * b.numerador, a.denominador * b.denominador);
+}
+
+func Rational_t invertRat(Rational_t a) {
+    return createRat(a.denominador, a.numerador);
+}
+
+func Rational_t divideRats(Rational_t a, Rational_t b) {
+    return createRat(a.numerador * b.denominador, a.denominador * b.numerador);
+}
