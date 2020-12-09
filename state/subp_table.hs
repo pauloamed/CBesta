@@ -5,6 +5,8 @@ import OurType
 
 import Lexer
 
+-- (String, Type, [(String, Type)], [Token])
+
 subProgTable :: Operation -> SubProg -> OurState -> OurState
 subProgTable INSERT subp (v, subpl, t, sp, True, contSubpr, loopStack) = (v, insertSubProgTable subp subpl, t, sp, True, contSubpr, loopStack)
 subProgTable _ _ _ = undefined
@@ -12,7 +14,11 @@ subProgTable _ _ _ = undefined
 
 insertSubProgTable :: SubProg -> [SubProg] -> [SubProg]
 insertSubProgTable subp []  = [subp]
-insertSubProgTable subp subProgTable = subProgTable ++ [subp]
+insertSubProgTable (subpNameA, subpTypeA, argsListA, tokensA) ((subpNameB, subpTypeB, argsListB, tokensB):subProgTableTail) =
+                if (subpNameA == subpNameB) then 
+                        undefined
+                else 
+                        ((subpNameB, subpTypeB, argsListB, tokensB):(insertSubProgTable (subpNameA, subpTypeA, argsListA, tokensA) subProgTableTail))
 
 
 searchForSubprogFromState :: String -> OurState -> SubProgContent

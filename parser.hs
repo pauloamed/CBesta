@@ -20,7 +20,7 @@ main :: IO ()
 main = (do  args <- getArgs
             case unsafePerformIO( parser (getTokens (head args))) of
                       { Left err -> print err;
-                        Right ans -> print (id "")
+                        Right ans -> putStrLn("");
                         -- Right ans -> print ans
                       }
           )

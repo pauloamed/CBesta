@@ -1,5 +1,10 @@
-Array<2, Int> a;
+struct Teste{
+    Int x;
+}
 
-a[0] := 2;
+// struct Teste{
+//     Int x;
+// }
 
-print(a[0]);
+
+print("oi");

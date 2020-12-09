@@ -33,5 +33,8 @@ getTypeFromTypesTable x ((StructType (name, attribs)):typesTail) =
 
 
 insertTypesTable :: Type -> [Type] -> [Type]
-insertTypesTable t []  = [t]
-insertTypesTable t typesTable = typesTable ++ [t]
+insertTypesTable (StructType (idA, fieldsA)) []  = [(StructType (idA, fieldsA))]
+insertTypesTable (StructType (idA, fieldsA)) ((StructType (idB, fieldsB)):typesTail) = 
+      if(idA == idB) then 
+        undefined
+      else ((StructType (idB, fieldsB)):(insertTypesTable (StructType (idA, fieldsA)) typesTail))
