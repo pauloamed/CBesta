@@ -1,1 +1,5 @@
-print("oi");
+Array<2, Int> a;
+
+a[0] := 2;
+
+print(a[0]);

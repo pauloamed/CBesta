@@ -245,7 +245,6 @@ assignmentsOpParser idd modifiers = (do   (exprVal, assignExpr) <- assignExprPar
                                             -- liftIO(print(right))
 
                                             if((left == []) && (not (headEqualsToP2SAM right))) then do -- a gnt nao tem setinha
-                                              -- liftIO(print("AAAAAAAAAAAAA"))
                                               s <- updateAndGetState(memTable UPDATE right (getStringFromId idd, getScope s, exprVal))
                                               pure()
                                             else do
@@ -955,16 +954,20 @@ valueIdParser = (do   idd <- idToken -- idd
 -- access modifier de struct ou de array
 accessModifierOpParser :: ParsecT [Token] OurState IO([AccessModifier], [Token])
 accessModifierOpParser = (do  leftBracket <- leftBracketToken -- access de array
+                              s <- getState
+                              liftIO (print s)
                               (valExpr, tokensExpr) <- exprParser -- o index do array TODO: compatibilidade
                               rightBracket <- rightBracketToken
                               (modifiers, tokensRemaining) <- accessModifierOpParser -- chamada recursiva
+                              
+                              liftIO (print valExpr)
 
                               -- cria um access modificer pro array
                               return (((ArrayAM (getIntValue valExpr)):modifiers), leftBracket:tokensExpr ++ rightBracket:tokensRemaining)) <|>
                          (do  dot <- dotToken
                               idd <- idToken -- campo do struct que sera  acessado
                               (modifiers, tokensRemaining) <- accessModifierOpParser -- chamada recursiva
-
+                              liftIO (print modifiers)
                               -- cria um access modifier pro struct
                               return (((StructAM (getStringFromId idd)):modifiers), dot:[idd])) <|>
                         (do   arrow <- arrowToken
@@ -1321,16 +1324,14 @@ printParser = (do printt <- printToken
                   rightParen <- rightParenToken
 
                   s <- getState
+                  liftIO(print s)
                   if isExecOn s then do -- so executa se exec tiver on 
-                      -- if(assertType val (IntType 0) ||
-                      --   assertType val (DoubleType 0.0) ||
-                      --   assertType val (BoolType False) ||
-                      --   assertType val (StringType "")) then do
-                      liftIO (print s)
-                      -- x <- getInput
-                      -- liftIO(print(x))
-                      liftIO (print val)
-                      -- else undefined
+                      if(assertType val (IntType 0) ||
+                        assertType val (DoubleType 0.0) ||
+                        assertType val (BoolType False) ||
+                        assertType val (StringType "")) then do
+                          liftIO (print val)
+                      else undefined
                   else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))
@@ -1359,11 +1360,16 @@ readOpParser = (do  (modifiers, (idd:tokens)) <- idParser -- ID NORMAL, SEM DERE
                       -- 3. tem que fazer o update na memoria -- TODO : COMPATIBILDIADE
                       (left, right) <- (return (getLastModifiersSepByArrow modifiers))
 
+                      liftIO (print (modifiers))
+
 
                       if((left == []) && (not (headEqualsToP2SAM right))) then do -- a gnt nao tem setinha
                         idVal <- (return ((getValFromState (getStringFromId idd, getScope s, NULL) s)))
+                        liftIO (print (right))
                         oldVal <- (return (getValFromValAndModifiers idVal right s))
+                        liftIO( print(oldVal))
                         newVal <- (return (convertStringToType readVal oldVal))
+                        liftIO( print(newVal))
                         s <- updateAndGetState(memTable UPDATE modifiers (getStringFromId idd, getScope s, newVal))
                         pure()
                       else do

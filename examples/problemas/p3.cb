@@ -1,0 +1,65 @@
+struct Matriz {
+    Int l;
+    Int c;
+    Array<2, Array<2, Int>> m; 
+}
+
+Matriz a, b;
+
+print("Entre a altura da matriz A: ");
+read(a.l);
+
+print("Entre a largura da matriz A: ");
+read(a.c);
+
+print("Entre os valores da matriz A: ");
+
+for (Int i := 0; i < a.l; i := i + 1) {
+    for (Int j := 0; j < a.c; j := j + 1) {
+        read (a.m[i][j]);
+    }
+}
+
+print("Entre a altura da matriz B: ");
+read(b.l);
+
+print("Entre a largura da matriz B: ");
+read(b.c);
+
+print("Entre os valores da matriz B: ");
+
+for (Int i := 0; i < b.l; i := i + 1) {
+    for (Int j := 0; j < b.c; j := j + 1) {
+        read (b.m[i][j]);
+    }
+}
+
+print("A + B: ");
+
+// if ((a.l == b.l) and (a.c == b.c)) {
+//     for (Int i := 0; i < b.l; i := i + 1) {
+//         for (Int j := 0; j < b.c; j := j + 1) {
+//             print (a.m[i][j] + b.m[i][j]);
+//         }
+//     }
+// } else {
+//     print("Não foi possível somar as duas matrizes (tamanhos incompatíveis)"); 
+// }
+
+// print("A * B: "); 
+
+// if (a.c == b.l) {
+//     for (Int i := 0; i < a.l; i := i + 1) {
+//         for (Int j := 0; j < b.c; j := j + 1) {
+//                 Int ac;
+
+//                 for (Int k := 0; k < a.c; k := k + 1) {
+//                     ac := ac + a.m[i][k] * b.m[k][j];  
+//                 }
+
+//                 print(ac);
+//         }
+//     }
+// } else {
+//     print("Não foi possível multiplicar as duas matrizes (tamanhos incompatíveis)"); 
+// }

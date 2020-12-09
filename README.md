@@ -46,18 +46,3 @@ TODO
 
 
 
-5 e 6.12:
-  - revisao e controle de erros
-  -- assignment
-  -- como indicar erros?
-  -- dupla declaracao
-  --- funcs, procs
-  --- structs
-  -- substr
-  --- dar erro ou retornar vazia qnd intervs invalidos sao passados?
-  -- compatibilidade de tipos
-  --- tamanho de array tem q ser int
-
-  - revisar o codigo enquanto comenta (1h30 ~2h)
-  - compatibilidade de tipos
-  - fazer os meninos testarem pra dar erro! >:(

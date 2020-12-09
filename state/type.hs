@@ -18,7 +18,7 @@ data Type =
     -- deriving (Eq, Show)
 
 instance Show Type where
-    show (IntType x) = id ("Int: " ++ (show x))
+    show (IntType x) = id (show x)
     show (DoubleType x) = show x
     show (BoolType True) = id "true"
     show (BoolType False) = id "false"
