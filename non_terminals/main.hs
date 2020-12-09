@@ -53,7 +53,7 @@ programParser = (do   blocks <- rootBlocksParser
 
 -- <blocks> -> { <block> } -- vai processar uma sequencia de blocos
 rootBlocksParser :: ParsecT [Token] OurState IO([Token])
-rootBlocksParser = (do  block <- rootBlocksParser
+rootBlocksParser = (do  block <- rootBlockParser
                         blocks <- remainingRootBlocksParser
                         -- retorna se tem stmt de retorno em algum de seus blocos
                         return ((block ++ blocks)))
@@ -62,7 +62,7 @@ rootBlocksParser = (do  block <- rootBlocksParser
 
 -- vai processar os blocos restantes de (blocksParser)
 remainingRootBlocksParser :: ParsecT [Token] OurState IO([Token])
-remainingRootBlocksParser = (do   block <- rootBlocksParser
+remainingRootBlocksParser = (do   block <- rootBlockParser
                                   blocks <- remainingRootBlocksParser
                               -- retorna se tem stmt de retorno em algum de seus blocos
                                   return ((block ++ blocks))) <|>

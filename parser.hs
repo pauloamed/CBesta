@@ -17,13 +17,8 @@ parser tokens = runParserT programParser (([], 0), [], [], [rootScope], True, 0,
 
 
 main :: IO ()
--- main = print((getTokens "ultimate.cb"))
-main = (do  programCb <- getArgs
-            args <- getArgs
-            fileText <- openFile (args !! 0) ReadMode
-            s <- hGetContents fileText
-            print(s)
-            case unsafePerformIO( parser (getTokens (s))) of
+main = (do  args <- getArgs
+            case unsafePerformIO( parser (getTokens (head args))) of
                       { Left err -> print err;
                         Right ans -> print (id "")
                         -- Right ans -> print ans
