@@ -2,6 +2,10 @@ struct Rational_t {
     Int numerador, denominador;
 }
 
+func String toStr(Int x){
+    return cast(x, String);
+}
+
 // A)
 func Rational_t createRat(Int a, Int b) {
     Rational_t ret;
@@ -22,18 +26,20 @@ func Bool areEqual(Rational_t a, Rational_t b) {
 // C)
 proc allOperations(Rational_t a, Rational_t b) {
     Rational_t resAdd := addRats(a,b);
-    Rational_t resNegate := negateRat(a,b);
+    Rational_t resNegate := negateRat(a);
     Rational_t resSub := subtractRats(a,b);
     Rational_t resMultiply := multiplyRats(a,b);
-    Rational_t resInvert := invertRat(a,b);
+    Rational_t resInvert := invertRat(a);
     Rational_t resDiv := divideRats(a,b);
 
-    println("Resultado da soma: " + toStr(resAdd.numerador) + "/" + toStr(resAdd.denominador)));
-    println("Resultado da negacao: " + toStr(resNegate.numerador) + "/" + toStr(resNegate.denominador)));
-    println("Resultado da subtracao: " + toStr(resSub.numerador) + "/" + toStr(resSub.denominador)));
-    println("Resultado da multiplicacao: " + toStr(resMultiply.numerador) + "/" + toStr(resMultiply.denominador)));
-    println("Resultado da inversao: " + toStr(resInvert.numerador) + "/" + toStr(resInvert.denominador)));
-    println("Resultado da divisao: " + toStr(resDiv.numerador) + "/" + toStr(resDiv.denominador)));
+    println("Resultado da soma: " + toStr(resAdd.numerador) + "/" + toStr(resAdd.denominador));
+    println("Resultado da negacao: " + toStr(resNegate.numerador) + "/" + toStr(resNegate.denominador));
+    println("Resultado da subtracao: " + toStr(resSub.numerador) + "/" + toStr(resSub.denominador));
+    println("Resultado da multiplicacao: " + toStr(resMultiply.numerador) + "/" + toStr(resMultiply.denominador));
+    println("Resultado da inversao: " + toStr(resInvert.numerador) + "/" + toStr(resInvert.denominador));
+    println("Resultado da divisao: " + toStr(resDiv.numerador) + "/" + toStr(resDiv.denominador));
+
+    return;
 
 }
 func Rational_t addRats(Rational_t a, Rational_t b) {
@@ -79,8 +85,8 @@ Int a, b;
 read(a);
 read(b);
 
-Rational_t A_res := createRat(a,b);
-println("Resultado da Parte A: " + toStr(A_res.numerador) + "/" + toStr(A_res.denominador));
+Rational_t a_res := createRat(a,b);
+println("Resultado da Parte A: " + toStr(a_res.numerador) + "/" + toStr(a_res.denominador));
 
 println("Parte B");
 
@@ -95,9 +101,9 @@ read(y1);
 read(x2);
 read(y2);
 
-Rational_t X := createRat(x1,y1);
-Rational_t Y := createRat(x2,y2);
+Rational_t xx := createRat(x1,y1);
+Rational_t xy := createRat(x2,y2);
 
 println("Executando C");
-allOperations(X,Y);
+allOperations(xx,xy);
 
