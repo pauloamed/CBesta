@@ -1,11 +1,11 @@
 Double x, y;
 Int c;
 
-read(x);
-read(y);
-read(c);
+print("Insira o valor de x: "); read(x);
+print("Insira o valor de y: "); read(y);
+print("Insira o valor de c: "); read(c);
 
-print(x ^ 2 - y + cast(c, Double));
+print("O resultado eh: " + cast(x ^ 2 - y + cast(c, Double), String));
 
 
 

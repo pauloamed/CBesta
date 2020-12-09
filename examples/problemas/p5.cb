@@ -18,8 +18,9 @@ proc mdc(Int n, Int m, Pointer<Int> r){
 Pointer<Int> x := alloc(Int);
 Int n, m;
 
-read(n); read (m);
+print("Insira o valor de n: ");read(n);
+print("Insira o valor de m: ");read(m);
 
 mdc(n, m, x);
 
-print(*x);
+print("Valor do mdc: " + cast(*x, String));

@@ -77,13 +77,13 @@ proc bfs(Pointer<Node> head){
 
 
     while(currTop < currBottom){
-        if(!isNull(fila[currTop]->right)){
-            fila[currBottom] := fila[currTop]->right;
+        if(!isNull(fila[currTop]->left)){
+            fila[currBottom] := fila[currTop]->left;
             lvl[currBottom] := lvl[currTop] + 1;
             currBottom := currBottom + 1;
         }
-        if(!isNull(fila[currTop]->left)){
-            fila[currBottom] := fila[currTop]->left;
+        if(!isNull(fila[currTop]->right)){
+            fila[currBottom] := fila[currTop]->right;
             lvl[currBottom] := lvl[currTop] + 1;
             currBottom := currBottom + 1;
         }
@@ -94,19 +94,20 @@ proc bfs(Pointer<Node> head){
     Int lastLvl := 0;
     for(Int i := 0; i < currBottom; i := i + 1){
         if(lastLvl != lvl[i]){
-            print("");
+            println("");
         }
-        print(fila[i]->val);
+        print(cast(fila[i]->val,String) + " ");
         lastLvl := lvl[i];
     }
     return;
 }
 
 
-Int n; read(n);
+Int n; print("Escreva a quantidade de valores: "); read(n);
 Pointer<Node> head;
 while(n > 0){
-    Int x; read(x);
+    Int x; 
+    print("Insira um valor: ");read(x);
     if(isNull(head)){
         head := createNode(x);
     }else{
@@ -119,9 +120,9 @@ Pointer<Int> minVal := alloc(Int);
 Pointer<Int> maxVal := alloc(Int);
 
 Int minDeep := getMinVal(head, minVal);
-print("O valor minimo eh: " + cast(*minVal, String) + " na altura " + cast(minDeep, String));
+println("O valor minimo eh: " + cast(*minVal, String) + " na altura " + cast(minDeep, String));
 
 Int maxDeep := getMaxVal(head, maxVal);
-print("O valor maximo eh: " + cast(*maxVal, String) + " na altura " + cast(maxDeep, String));
+println("O valor maximo eh: " + cast(*maxVal, String) + " na altura " + cast(maxDeep, String));
 
 bfs(head);

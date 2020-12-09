@@ -13,6 +13,8 @@ import ScopesPrimTokens
 
 import ExprTokenUtils
 
+import System.IO
+
 import MemTable
 import SubProgTable
 import TypesTable
@@ -540,6 +542,7 @@ loopRecursiveExecution (condExpr, loopBinding, body) =
             s <- updateAndGetState (addToCurrentScope loopScope)
 
             s <- updateAndGetState (setCurrLoopControl OK)
+            -- liftIO(print(s))
             _ <- enclosedBlocksParser -- executando corpo do loop
             
             -- atualizando a var de estado (pode ter ficado obsoleta apos a exeucuao do corpo)
@@ -955,27 +958,27 @@ valueIdParser = (do   idd <- idToken -- idd
 accessModifierOpParser :: ParsecT [Token] OurState IO([AccessModifier], [Token])
 accessModifierOpParser = (do  leftBracket <- leftBracketToken -- access de array
                               s <- getState
-                              liftIO (print s)
+                              -- liftIO (print s)
                               (valExpr, tokensExpr) <- exprParser -- o index do array TODO: compatibilidade
                               rightBracket <- rightBracketToken
                               (modifiers, tokensRemaining) <- accessModifierOpParser -- chamada recursiva
                               
-                              liftIO (print valExpr)
+                              -- liftIO (print valExpr)
 
                               -- cria um access modificer pro array
                               return (((ArrayAM (getIntValue valExpr)):modifiers), leftBracket:tokensExpr ++ rightBracket:tokensRemaining)) <|>
                          (do  dot <- dotToken
                               idd <- idToken -- campo do struct que sera  acessado
                               (modifiers, tokensRemaining) <- accessModifierOpParser -- chamada recursiva
-                              liftIO (print modifiers)
+                              -- liftIO (print modifiers)
                               -- cria um access modifier pro struct
-                              return (((StructAM (getStringFromId idd)):modifiers), dot:[idd])) <|>
+                              return (((StructAM (getStringFromId idd)):modifiers), dot:[idd] ++ tokensRemaining)) <|>
                         (do   arrow <- arrowToken
                               idd <- idToken -- campo do struct que sera  acessado
                               (modifiers, tokensRemaining) <- accessModifierOpParser -- chamada recursiva
 
                               -- cria um access modifier pro struct
-                              return (((P2SAM (getStringFromId idd)):modifiers), arrow:[idd])) <|>
+                              return (((P2SAM (getStringFromId idd)):modifiers), arrow:[idd] ++ tokensRemaining)) <|>
                          (return ([],[]))
 
 
@@ -1289,7 +1292,7 @@ subStrParser = (do  substr <- substrToken
 
 -- <void_command> -> <free> | <print> | <read>
 voidCommandParser :: ParsecT [Token] OurState IO([Token])
-voidCommandParser = (do   x <- freeParser <|> printParser <|> readParser
+voidCommandParser = (do   x <- freeParser <|> printParser <|> readParser <|> printLnParser
                           return x)
 
 
@@ -1324,18 +1327,39 @@ printParser = (do printt <- printToken
                   rightParen <- rightParenToken
 
                   s <- getState
-                  liftIO(print s)
+                  -- liftIO(print s)
                   if isExecOn s then do -- so executa se exec tiver on 
                       if(assertType val (IntType 0) ||
                         assertType val (DoubleType 0.0) ||
                         assertType val (BoolType False) ||
                         assertType val (StringType "")) then do
-                          liftIO (print val)
+                          liftIO (putStr (show val))
+                          liftIO (hFlush stdout)
                       else undefined
                   else pure ()
 
                   return (printt:leftParen:expr ++ [rightParen]))
 
+
+-- <print> -> PRINT LEFT_PAREN <expr> RIGHT_PAREN
+printLnParser :: ParsecT [Token] OurState IO([Token])
+printLnParser = (do   printt <- printLnToken
+                      leftParen <- leftParenToken
+                      (val, expr) <- exprParser -- expressao a ser impressa
+                      rightParen <- rightParenToken
+
+                      s <- getState
+                      -- liftIO(print s)
+                      if isExecOn s then do -- so executa se exec tiver on 
+                          if(assertType val (IntType 0) ||
+                            assertType val (DoubleType 0.0) ||
+                            assertType val (BoolType False) ||
+                            assertType val (StringType "")) then do
+                              liftIO (print (val))
+                          else undefined
+                      else pure ()
+
+                      return (printt:leftParen:expr ++ [rightParen]))
 
 
 -- <read> -> READ LEFT_PAREN <id> RIGHT_PAREN
@@ -1349,9 +1373,12 @@ readParser = (do  readd <- readToken
 -- separado em dois caso a leitura seja de um valor de ponteiro
 -- esse eh tratado diferentemente de uma leitura de id normal (com ou sem modfs)
 readOpParser :: ParsecT [Token] OurState IO([Token])
-readOpParser = (do  (modifiers, (idd:tokens)) <- idParser -- ID NORMAL, SEM DEREF
+readOpParser = (do  s <- getState
+                    -- liftIO(print(s))
+                    (modifiers, (idd:tokens)) <- idParser -- ID NORMAL, SEM DEREF
                     rightParen <- rightParenToken
                     s <- getState
+                    -- liftIO(print(s))
                     if(isExecOn s) then do -- so escreve se exec tiver on
                       readVal <- liftIO (getLine) -- leitura de input
 
@@ -1360,16 +1387,16 @@ readOpParser = (do  (modifiers, (idd:tokens)) <- idParser -- ID NORMAL, SEM DERE
                       -- 3. tem que fazer o update na memoria -- TODO : COMPATIBILDIADE
                       (left, right) <- (return (getLastModifiersSepByArrow modifiers))
 
-                      liftIO (print (modifiers))
+                      -- liftIO (print (modifiers))
 
 
                       if((left == []) && (not (headEqualsToP2SAM right))) then do -- a gnt nao tem setinha
                         idVal <- (return ((getValFromState (getStringFromId idd, getScope s, NULL) s)))
-                        liftIO (print (right))
+                        -- liftIO (print (right))
                         oldVal <- (return (getValFromValAndModifiers idVal right s))
-                        liftIO( print(oldVal))
+                        -- liftIO( print(oldVal))
                         newVal <- (return (convertStringToType readVal oldVal))
-                        liftIO( print(newVal))
+                        -- liftIO( print(newVal))
                         s <- updateAndGetState(memTable UPDATE modifiers (getStringFromId idd, getScope s, newVal))
                         pure()
                       else do

@@ -18,6 +18,12 @@ printToken = tokenPrim show update_pos get_token where
   get_token _  = Nothing
 
 
+printLnToken :: ParsecT [Token] st IO (Token)
+printLnToken = tokenPrim show update_pos get_token where
+  get_token (PrintLn p)  = Just (PrintLn p)
+  get_token _  = Nothing
+
+
 readToken :: ParsecT [Token] st IO (Token)
 readToken = tokenPrim show update_pos get_token where
   get_token (Read p)  = Just (Read p)

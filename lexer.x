@@ -28,6 +28,7 @@ tokens :-
 ----------------------- COMMANDS  --------------------------
     free                                    { \p s -> Free p }
     print                                   { \p s -> Print p }
+    println                                 { \p s -> PrintLn p }
     read                                    { \p s -> Read p }
     alloc                                   { \p s -> Alloc p }
     cast                                    { \p s -> Cast p }
@@ -116,6 +117,7 @@ data Token =
 -- COMMANDS  ---------------------------------------------
     Free AlexPosn |
     Print AlexPosn |
+    PrintLn AlexPosn |
     Read AlexPosn |
     Alloc AlexPosn |
     Addr AlexPosn |

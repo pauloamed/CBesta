@@ -24,12 +24,6 @@ returnToken = tokenPrim show update_pos get_token where
   get_token _  = Nothing
 
 
-importToken :: ParsecT [Token] st IO (Token)
-importToken = tokenPrim show update_pos get_token where
-  get_token (Import p)  = Just (Import p)
-  get_token _  = Nothing
-
-
 funcToken :: ParsecT [Token] st IO (Token)
 funcToken = tokenPrim show update_pos get_token where
   get_token (Func p)  = Just (Func p)
