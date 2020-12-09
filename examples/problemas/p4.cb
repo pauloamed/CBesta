@@ -20,6 +20,22 @@ func Bool areEqual(Rational_t a, Rational_t b) {
 }
 
 // C)
+proc allOperations(Rational_t a, Rational_t b) {
+    Rational_t resAdd := addRats(a,b);
+    Rational_t resNegate := negateRat(a,b);
+    Rational_t resSub := subtractRats(a,b);
+    Rational_t resMultiply := multiplyRats(a,b);
+    Rational_t resInvert := invertRat(a,b);
+    Rational_t resDiv := divideRats(a,b);
+
+    println("Resultado da soma: " + resAdd.numerador + "/" + resAdd.denominador));
+    println("Resultado da negacao: " + resNegate.numerador + "/" + resNegate.denominador));
+    println("Resultado da subtracao: " + resSub.numerador + "/" + resSub.denominador));
+    println("Resultado da multiplicacao: " + resMultiply.numerador + "/" + resMultiply.denominador));
+    println("Resultado da inversao: " + resInvert.numerador + "/" + resInvert.denominador));
+    println("Resultado da divisao: " + resDiv.numerador + "/" + resDiv.denominador));
+
+}
 func Rational_t addRats(Rational_t a, Rational_t b) {
     Int num := a.numerador * b.denominador + a.denominador * b.numerador;
     Int den := a.denominador * b.denominador;
@@ -55,3 +71,5 @@ Rational_t x := createRat(1, 1);
 Rational_t y := createRat(2, 2);
 Rational_t z := createRat(3, 2);
 
+
+println("Parte A")
