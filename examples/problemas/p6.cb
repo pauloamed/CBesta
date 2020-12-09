@@ -35,7 +35,7 @@ proc addVal(Pointer<Node> curr, Int x){
 func Int getMinVal(Pointer<Node> head, Pointer<Int> minVal){
     Int level := 0;
     if(isNull(head)){
-        print("Ai nao da ne...");
+        print("Ai nao da ne...!");
         return -1;
     }else{
         while(!(isNull(head->left))){

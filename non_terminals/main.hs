@@ -41,24 +41,57 @@ type TokenParser = ParsecT [Token] OurState IO (Token)
 
 -- <program> -> { <import> } <blocks> // IMPORTS EH OPICIONAL
 programParser :: ParsecT [Token] OurState IO([Token])
-programParser = (do   imports <- many importParser
-                      (_, blocks) <- blocksParser
+programParser = (do   blocks <- rootBlocksParser
                       eof
-                      return (concat(imports) ++ blocks))
-
-
--- <import> -> HASHTAG IMPORT STRING_LIT {SEPARATOR}
-importParser :: ParsecT [Token] OurState IO([Token])
-importParser = (do  hashtag <- hashtagToken
-                    importt <- importToken
-                    fileName <- stringLitToken -- o nome do arquivo
-                    sep <- separatorToken
-                    return (hashtag:importt:fileName:[sep]))
+                      return (blocks))
 
 
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
+
+
+-- <blocks> -> { <block> } -- vai processar uma sequencia de blocos
+rootBlocksParser :: ParsecT [Token] OurState IO([Token])
+rootBlocksParser = (do  block <- rootBlocksParser
+                        blocks <- remainingRootBlocksParser
+                        -- retorna se tem stmt de retorno em algum de seus blocos
+                        return ((block ++ blocks)))
+
+
+
+-- vai processar os blocos restantes de (blocksParser)
+remainingRootBlocksParser :: ParsecT [Token] OurState IO([Token])
+remainingRootBlocksParser = (do   block <- rootBlocksParser
+                                  blocks <- remainingRootBlocksParser
+                              -- retorna se tem stmt de retorno em algum de seus blocos
+                                  return ((block ++ blocks))) <|>
+                            (return ([])) -- caso base, nao ha mais blocos, nao ha stmt de retorno (por isso q eh False)
+
+
+
+rootBlockParser :: ParsecT [Token] OurState IO([Token])
+rootBlockParser = (do   (_, stmt) <- stmtParser -- pode ser um stmt seguido de um separador
+                        sep <- separatorToken
+                        return (stmt ++ [sep])) <|>
+                  (do   (_, compoundStmt) <- controlStructureParser <|> subprogramsParser <|> structParser
+                        return (compoundStmt)) <|>
+                          -- pode ser um compound stmt: estrutura de controle, subpr ou struct
+                  (do   pure()   
+                          -- quando criamos um novo bloco, precisamos
+                          -- 1. criar o seu escopo no escopo atual
+                          -- 2. executa-lo vendo se tem algum stmt de return em seu corpo
+                          -- 3. remover seu escopo do escopo atual
+
+                        s <- getState
+                        if (isExecOn s) then do
+                          s <- updateAndGetState (addToCurrentScope blockScope) -- entrando num novo escopo
+                          (_, enclosedBlocks) <- enclosedBlocksParser
+                          s <- updateAndGetState removeFromCurrentScope -- saindo do escopo criado
+                          return (enclosedBlocks)
+                        else do
+                          (_, enclosedBlocks) <- enclosedBlocksParser
+                          return (enclosedBlocks))
 
 
 -- <blocks> -> { <block> } -- vai processar uma sequencia de blocos
@@ -84,7 +117,7 @@ blockParser :: ParsecT [Token] OurState IO(Bool, [Token])
 blockParser = (do   (hasReturn, stmt) <- stmtParser -- pode ser um stmt seguido de um separador
                     sep <- separatorToken
                     return (hasReturn, stmt ++ [sep])) <|>
-              (do   (hasReturn, compoundStmt) <- controlStructureParser <|> subprogramsParser <|> structParser
+              (do   (hasReturn, compoundStmt) <- controlStructureParser
                     return (hasReturn, compoundStmt)) <|>
                      -- pode ser um compound stmt: estrutura de controle, subpr ou struct
               (do   pure()   
@@ -183,27 +216,6 @@ assignmentsOpParserDeref (idd, sp, _) = (do   s <- getState
 
                                               remaining <- remainingAssignsParser -- pode ter mais assigns
                                               return (assignExpr ++ remaining))
-
-
--- a.b.c->d->f->g
--- .e.f.t
-
--- a.b.c == 0 setas -- resolve como sempre resolveu
--- a
--- ->b.c == 1 seta 
-
--- a.b
--- ->c == 1 seta 
-
--- a.b->c
--- ->d == 2 setas
--- a.b->c->d
--- ->e.f.g.h == 3 setas
-
--- aqueal funcao retorna o valor em e
-
--- (->d)
---   se for seta, a gnt vai 
 
 
 
@@ -496,6 +508,7 @@ executeLoop (initBinding, condExpr, loopBinding, body) = -- binding inicial, con
         return ())
 
 
+
 -- funcao para execucao de loop de facto
 -- vai ficar testando a condicao e exeuctando o corpo (+ binding de final de loop)
 -- SO EXECUTA SE EXEC TIVER ON
@@ -609,12 +622,17 @@ forParser =   (do   for <- forToken
                     -- (1) removendo FOR do escopo atual
 
 
+
 -- <if> -> IF <enclosed_expr> THEN <enclosed_blocks> [ ELSE ( <if> | <enclosed_blocks> ) ]
 ifParser :: ParsecT [Token] OurState IO(Bool, [Token])
 ifParser =  (do   iff <- ifToken
                   (exprValue, enclosedExpr) <- enclosedExprParser -- recuperando o valor da condicao
                   s <- getState -- recupera o estado atual
 
+
+                  -- if(){
+                    
+                  -- }
 
 
                  
@@ -1079,7 +1097,7 @@ funcallOpParser idd  parent = (do   leftParen <- leftParenToken
                                       s <- updateAndGetState (declareArgs (getScope s) argsList valArgs)
 
                                       -- sobrescrevendo o fluxo de tokens restantes do parser pra processar o subpr
-                                      remainingTokens <- getInput
+                                      remainingTokens <- getInput -- retorna todos os tokens que o parser ainda nao processou
                                       setInput (body ++ remainingTokens)
 
                                       -- chamada do subpr
@@ -1129,7 +1147,8 @@ returnParser = (do  ret <- returnToken -- token (RETURN)
                       else pure ()
 
                       -- adicionar o valor a ser retornado na variavel temporaria para essa funcao
-                      s <- updateAndGetState (memTable INSERT [] ((getStringFromSubprCounter s), returnSpecialScope, valExpr))
+                      s <- updateAndGetState (memTable INSERT [] ((getStringFromSubprCounter s),
+                                   returnSpecialScope, valExpr))
                       
 
                       -- se estou dentro de um loop, defino o loop control como a flag RETURN
@@ -1307,7 +1326,7 @@ printParser = (do printt <- printToken
                       --   assertType val (DoubleType 0.0) ||
                       --   assertType val (BoolType False) ||
                       --   assertType val (StringType "")) then do
-                      -- liftIO (print s)
+                      liftIO (print s)
                       -- x <- getInput
                       -- liftIO(print(x))
                       liftIO (print val)
@@ -1468,10 +1487,10 @@ maybeAssignExprParser parent = (do  if parent == "struct" then do
 
 -- <declrs> -> <type> <maybe_assigned_id>  { COMMA <maybe_assigned_id>}]
 declrsParser :: String -> ParsecT [Token] OurState IO([(String, Type)], [Token])
-declrsParser parent = (do   (semanType, typee) <- typeParser
-                            idd <- idToken -- aqui eh tokens mesmo
+declrsParser parent = (do   (semanType, typee) <- typeParser -- (IntType 0)
+                            idd <- idToken -- aqui eh tokens mesmo  -- icaro (Int icaro)
 
-                            (val, maybeAssignExpr) <- maybeAssignExprParser parent
+                            (val, maybeAssignExpr) <- maybeAssignExprParser parent -- 10 (Node icardo := 10)
 
                             s <- getState
 

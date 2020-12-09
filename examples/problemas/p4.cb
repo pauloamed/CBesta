@@ -19,13 +19,6 @@ func Bool areEqual(Rational_t a, Rational_t b) {
     return num1 == num2;
 }
 
-Rational_t x := createRat(1, 1);
-Rational_t y := createRat(2, 2);
-Rational_t z := createRat(3, 2);
-
-print(areEqual(x, y));
-print(areEqual(x, z));
-
 // C)
 func Rational_t addRats(Rational_t a, Rational_t b) {
     Int num := a.numerador * b.denominador + a.denominador * b.numerador;
@@ -35,7 +28,7 @@ func Rational_t addRats(Rational_t a, Rational_t b) {
 }
 
 func Rational_t negateRat(Rational_t a) {
-    return createRat(a.numerador * -1, a.denominador * -1);
+    return createRat(a.numerador * -1, a.denominador);
 }
 
 func Rational_t subtractRats(Rational_t a, Rational_t b) {
@@ -56,3 +49,9 @@ func Rational_t invertRat(Rational_t a) {
 func Rational_t divideRats(Rational_t a, Rational_t b) {
     return createRat(a.numerador * b.denominador, a.denominador * b.numerador);
 }
+
+
+Rational_t x := createRat(1, 1);
+Rational_t y := createRat(2, 2);
+Rational_t z := createRat(3, 2);
+

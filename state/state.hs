@@ -19,6 +19,7 @@ type SubProgContent = (Type, [(String, Type)], [Token])
 -- Memoria, Funcoes, Procedimentos, Tipos e EM_EXEC
 type OurState = (([Var], Int), [SubProg], [Type], [String], Bool, Int, [(LoopControlType, Int)])
 
+
 --------------------------------------------------------------------------------
 -----------------------------------  EXEC   ------------------------------------
 --------------------------------------------------------------------------------

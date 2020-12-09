@@ -4,6 +4,7 @@ import Lexer
 import Text.Parsec
 
 
+
 data Type =
     NULL |
     IntType Int |
