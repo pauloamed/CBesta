@@ -28,12 +28,12 @@ proc allOperations(Rational_t a, Rational_t b) {
     Rational_t resInvert := invertRat(a,b);
     Rational_t resDiv := divideRats(a,b);
 
-    println("Resultado da soma: " + resAdd.numerador + "/" + resAdd.denominador));
-    println("Resultado da negacao: " + resNegate.numerador + "/" + resNegate.denominador));
-    println("Resultado da subtracao: " + resSub.numerador + "/" + resSub.denominador));
-    println("Resultado da multiplicacao: " + resMultiply.numerador + "/" + resMultiply.denominador));
-    println("Resultado da inversao: " + resInvert.numerador + "/" + resInvert.denominador));
-    println("Resultado da divisao: " + resDiv.numerador + "/" + resDiv.denominador));
+    println("Resultado da soma: " + toStr(resAdd.numerador) + "/" + toStr(resAdd.denominador)));
+    println("Resultado da negacao: " + toStr(resNegate.numerador) + "/" + toStr(resNegate.denominador)));
+    println("Resultado da subtracao: " + toStr(resSub.numerador) + "/" + toStr(resSub.denominador)));
+    println("Resultado da multiplicacao: " + toStr(resMultiply.numerador) + "/" + toStr(resMultiply.denominador)));
+    println("Resultado da inversao: " + toStr(resInvert.numerador) + "/" + toStr(resInvert.denominador)));
+    println("Resultado da divisao: " + toStr(resDiv.numerador) + "/" + toStr(resDiv.denominador)));
 
 }
 func Rational_t addRats(Rational_t a, Rational_t b) {
@@ -72,4 +72,32 @@ Rational_t y := createRat(2, 2);
 Rational_t z := createRat(3, 2);
 
 
-println("Parte A")
+println("Parte A");
+println("Insira um numerador e um denominador");
+Int a, b;
+
+read(a);
+read(b);
+
+Rational_t A_res := createRat(a,b);
+println("Resultado da Parte A: " + toStr(A_res.numerador) + "/" + toStr(A_res.denominador));
+
+println("Parte B");
+
+
+println("Parte C");
+println("Insira um numerador e denominador para criar um racional X");
+println("Insira um numerador e denominador para criar um racional Y");
+Int x1,y1,x2,y2;
+
+read(x1);
+read(y1);
+read(x2);
+read(y2);
+
+Rational_t X := createRat(x1,y1);
+Rational_t Y := createRat(x2,y2);
+
+println("Executando C");
+allOperations(X,Y);
+
